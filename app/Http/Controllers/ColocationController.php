@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Auth;
 
 class ColocationController extends Controller
 {
-    function create(){
+    function show(){
 
-        return view('create');
+        return view('colocation');
     }
     function store(Request $request){
 
