@@ -21,6 +21,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
+        'is_banned',
     ];
 
     /**
@@ -45,24 +47,15 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    public function colocation(): BelongsToMany{
+    public function colocation(): BelongsToMany
+    {
         return $this->belongsToMany(Colocation::class)
-        ->withPivot('role','left_at')
-        ->withTimestamps();
+            ->withPivot('role', 'left_at')
+            ->withTimestamps();
     }
 
     public function isAdmin()
     {
         return $this->role === 'admin';
-    }
-
-    public function isOwner()
-    {
-        return $this->role === 'user' && $this->type === 'owner';
-    }
-
-    public function isMember()
-    {
-        return $this->role === 'user' && $this->type === 'member';
     }
 }
