@@ -9,15 +9,16 @@ use Illuminate\Support\Facades\Auth;
 class ColocationController extends Controller
 {
     function index(){
-
-        return view('colocation.colocations');
+        $colocations = Colocation::whereHas('users', function($query){
+            $query->where('user_id', Auth()->id());
+        })->get();
+        return view('colocation.colocations', compact('colocations'));
     }
     function store(Request $request){
 
        $data = $request->validate(
         [
             'name'=>'required|min:5|max:30',
-            'description'=>'nullable|string|max:100'
         ]
        );
         $colocation = Colocation::create(
@@ -27,5 +28,11 @@ class ColocationController extends Controller
             'created_by'=>Auth()->id()
         ]
        );
+
+
+       $colocation->users()->attach(auth()->id());
+
+    return redirect()->route('colocation.index');
     }
+
 }

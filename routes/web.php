@@ -13,13 +13,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [ColocationController::class, 'index'])->name('dashboard');
 
     Route::middleware(['banned'])->group(function () {
-        Route::resource('colocations', ColocationController::class);
 
         Route::prefix('invitations')->group(function () {
-            Route::get('/', [InvitationController::class, 'index'])->name('invitations.index');
-            Route::post('/', [InvitationController::class, 'store'])->name('invitations.store');
-            Route::post('/accept/{token}', [InvitationController::class, 'accept'])->name('invitations.accept');
-            Route::post('/reject/{token}', [InvitationController::class, 'reject'])->name('invitations.reject');
+            Route::get('/', [InvitationController::class, 'index'])->name('colocation.index');
+            Route::post('/', [InvitationController::class, 'store'])->name('colocation.store');
+        });
+        Route::prefix('invitations')->group(function () {
+            
         });
     });
 });

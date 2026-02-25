@@ -8,6 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Colocation extends Model
 {
+     protected $fillable = [
+        'name',
+        'description',
+     ];
+
+
     public function users(): BelongsToMany{
         return $this->belongsToMany(User::class)// clé etrange
         ->withPivot('role','left_at')
