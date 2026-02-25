@@ -19,33 +19,46 @@ class ColocationPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Colocation $colocation): bool
+    public function view(User $user, Colocation $colocation)
     {
-        return false;
+        if ($user->is_banned) return false;
+
+        if ($user->role === 'admin') return true;
+
+        return $colocation->users()
+            ->where('user_id', $user->id)
+            ->exists();
     }
 
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User $user)
     {
-        return false;
+        return !$user->is_banned;
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Colocation $colocation): bool
+    public function update(User $user, Colocation $colocation)
     {
-        return false;
+        if ($user->is_banned) return false;
+
+        if ($user->role === 'admin') return true;
+
+        return $colocation->users()
+            ->where('user_id', $user->id)
+            ->wherePivot('role', 'owner')
+            ->exists();
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Colocation $colocation): bool
+    public function delete(User $user, Colocation $colocation)
     {
-        return false;
+        return $user->role === 'admin';
     }
 
     /**

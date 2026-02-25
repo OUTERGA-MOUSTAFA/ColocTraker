@@ -1,15 +1,28 @@
 <?php
 
+use App\Http\Controllers\ColocationController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', fn() => view('welcome'));
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::middleware(['auth'])->group(function () {
+
+    Route::get('/dashboard', [ColocationController::class, 'index'])->name('dashboard');
+
+    Route::middleware(['banned'])->group(function () {
+        Route::resource('colocations', ColocationController::class);
+
+        Route::prefix('invitations')->group(function () {
+            Route::get('/', [InvitationController::class, 'index'])->name('invitations.index');
+            Route::post('/', [InvitationController::class, 'store'])->name('invitations.store');
+            Route::post('/accept/{token}', [InvitationController::class, 'accept'])->name('invitations.accept');
+            Route::post('/reject/{token}', [InvitationController::class, 'reject'])->name('invitations.reject');
+        });
+    });
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -17,4 +30,4 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
