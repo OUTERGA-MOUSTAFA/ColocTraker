@@ -1,6 +1,6 @@
  <x-app-layout>
      <!-- The best way to take care of the future is to take care of the present moment. - Thich Nhat Hanh -->
-     <div x-data="{ open: false }">
+     <div x-data="{ open: {{ $errors->any() ? 'true' : 'false' }} }">
          <x-slot name="header">
              <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
                  {{ __('Dashboard') }}
@@ -23,7 +23,7 @@
                          <div class="p-4 mb-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
                              <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-200">{{ $colocation->name }}</h3>
                              <p class="text-gray-600 dark:text-gray-400">{{ $colocation->description }}</p>
-                             <a href="{{ route('colocations.show', $colocation->id) }}" class="text-blue-500 hover:underline mt-2 inline-block">View Details</a>
+                             <a href="{{ route('colocation.show', $colocation->id) }}" class="text-blue-500 hover:underline mt-2 inline-block">View Details</a>
                          </div>
                          @endforeach
                      </div>
@@ -47,8 +47,16 @@
                  <h2 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">
                      Create Colocation
                  </h2>
-
-                 <form method="POST" action="{{ route('colocations.store') }}">
+                    @if ($errors->any())
+    <div class="mb-4 rounded bg-red-100 border border-red-400 text-red-700 p-3">
+        <ul class="list-disc pl-5">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+                 <form method="POST" action="{{ route('colocation.store') }}">
                      @csrf
 
                      <!-- Name -->
