@@ -14,4 +14,8 @@ class Depence extends Model
     {
         return $this->hasMany(Depence::class);
     }
+    function categorie()
+    {
+        return $this->hasOne(Categories::class);
+    }
 }

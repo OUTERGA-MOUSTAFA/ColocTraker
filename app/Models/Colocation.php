@@ -18,6 +18,14 @@ class Colocation extends Model
         return $this->HasMany(Depence::class);
     }
 
+    public function invitations()
+    {
+        return $this->HasMany(Invitation::class);
+    }
+    public function categories(){
+        return $this->hasMany(Categories::class);
+    }
+    
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class) // clé etrange

@@ -61,19 +61,12 @@ class ColocationPolicy
         return $user->role === 'admin';
     }
 
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Colocation $colocation): bool
+    public function manageCategories(User $user, Colocation $colocation)
     {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Colocation $colocation): bool
-    {
-        return false;
+        // L'utilisateur doit être propriétaire de la colocation
+        return $colocation->users()
+            ->where('user_id', $user->id)
+            ->wherePivot('role', 'owner')
+            ->exists();
     }
 }

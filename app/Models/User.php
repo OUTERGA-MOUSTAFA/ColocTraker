@@ -59,6 +59,10 @@ class User extends Authenticatable
     {
        return $this->HasMany(Depence::class);
     }
+    public function categorie()
+    {
+       return $this->HasMany(Categories::class);
+    }
 
     public function invitation()
     {

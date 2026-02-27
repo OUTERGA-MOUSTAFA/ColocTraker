@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Colocation;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
 
 class ColocationController extends Controller
 {
@@ -26,13 +27,14 @@ class ColocationController extends Controller
 
     function store(Request $request)
     {
-        // $this->authorize('create', Colocation::class);
+        $this->authorize('create', Colocation::class);
         $data = $request->validate(
             [
                 'name' => 'required|min:5|max:30',
                 'description' => 'required|min:5|max:255'
             ]
         );
+
         $colocation = Colocation::create(
             [
                 'name' => $data['name'],
@@ -46,6 +48,9 @@ class ColocationController extends Controller
             'role' => 'owner'
         ]);
 
-        return view('colocation.index', compact('colocation'));
+        // return view('colocation.index', compact('colocation'));
+        return redirect()
+            ->route('colocation.show', $colocation->id)
+            ->with('success', 'Colocation créée avec succès.');
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\ColocationController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
@@ -17,20 +18,23 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('colocation')->group(function () {
         Route::get('/{id}', [ColocationController::class, 'show'])->name('colocation.show');
         Route::post('/', [ColocationController::class, 'store'])->name('colocation.store');
-        //Member devient quitter
-        Route::delete('/{id}', [ColocationController::class, 'leaveColocation'])->name('colocation.leave');
-        //owner devient annuler coloc
-        Route::delete('/{id}', [ColocationController::class, 'cancelColocation'])->name('colocation.cancel');
-    });
+        // Member leaves
+        Route::delete('/{id}/leave', [ColocationController::class, 'leaveColocation'])->name('colocation.leave');
+        // Ownera
+        Route::delete('/{id}/cancel', [ColocationController::class, 'cancelColocation'])->name('colocation.cancel');
 
+        // Category routes
+        Route::post('/{colocationId}/categories', [CategoriesController::class, 'store'])->name('categories.store');
+        Route::delete('/{colocationId}/categories/{categoryId}', [CategoriesController::class, 'destroy'])->name('categories.destroy');
+    });
 
     Route::prefix('invitation')->group(function () {
         Route::post('/{id}', [InvitationController::class, 'inviter'])->name('invitation.send');
-        Route::get('/{token}', [InvitationController::class, 'show'])->name('invitation.show');
-        Route::get('/{token}/accept', [InvitationController::class, 'accept'])->name('invitation.accept');
-
+        Route::get('/{invitation:token}', [InvitationController::class, 'show'])->name('invitation.show');
+        Route::post('/{invitation:token}/accept', [InvitationController::class, 'accept'])->name('invitation.accept');
+        Route::post('/{invitation:token}/refuse', [InvitationController::class, 'refuse'])->name('invitation.refuse');
     });
-    
+
     Route::prefix('expenses')->group(function () {
         Route::post('/{id}', [ColocationController::class, 'store'])->name('expenses.store');
     });

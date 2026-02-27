@@ -16,6 +16,11 @@ class InvitationController extends Controller
         if ($invitation->status !== 'pending') {
             abort(403, 'Invitation not valid');
         }
+
+        if (now()->greaterThan($invitation->expires_at)) {
+            abort(403, 'Invitation expired');
+        }
+
         return view('colocation.invitation', compact('invitation'));
     }
 
@@ -35,13 +40,93 @@ class InvitationController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        $url = route('invitation.show', ['token' => $token]);
+        $url = route('invitation.show', ['invitation' => $token]);
 
         SendInvitationEmail::dispatch($invitation, $url);
 
-        return back()->with([
-            'success' => 'Invitation sent successfully!',
-            'invitation_url' => $url
+        return redirect()
+            ->route('colocation.show', $id)
+            ->with([
+                'success' => 'Invitation sent successfully!',
+                'invitation_url' => $url
+            ]);
+    }
+
+    public function accept($token)
+    {
+        $invitation = Invitation::where('token', $token)->firstOrFail();
+
+
+        if (!auth()->check()) {
+            return redirect()->route('login');
+        }
+        // expired link
+        if ($invitation->expires_at && $invitation->expires_at < now()) {
+            $invitation->update(['status' => 'expired']);
+            return redirect()->route('dashboard')
+                ->with('error', 'L’invitation a expiré.');
+        }
+        // same email
+        if (auth()->user()->email !== $invitation->email) {
+            abort(403, 'Cette invitation ne vous appartient pas.');
+        }
+
+        if ($invitation->status === 'accepted') {
+            return redirect()->route('dashboard')
+                ->with('info', 'Invitation déjà acceptée.');
+        }
+
+        $colocation = $invitation->colocation;
+
+        if (!$colocation->users()->where('user_id', auth()->id())->exists()) {
+            $colocation->users()->attach(auth()->id(), [
+                'role' => 'member'
+            ]);
+        }
+
+        $invitation->update([
+            'status' => 'accepted',
+            'accepted_at' => now()
         ]);
+        $colocationName = $colocation->name;
+        return redirect()
+            ->route('colocation.show', $colocation->id)
+            ->with('success', 'Bienvenue dans ' . $colocationName);
+    }
+
+
+    public function refuse($token)
+    {
+        $invitation = Invitation::where('token', $token)->firstOrFail();
+
+        // auth
+        if (!auth()->check()) {
+            return redirect()->route('login');
+        }
+
+        // token expired
+        if ($invitation->expires_at && $invitation->expires_at < now()) {
+            $invitation->update(['status' => 'expired']);
+            return redirect()->route('dashboard')
+                ->with('error', 'L’invitation a expiré.');
+        }
+
+        // same email
+        if (auth()->user()->email !== $invitation->email) {
+            abort(403, 'Cette invitation ne vous appartient pas.');
+        }
+
+        // tester already accepted ola refused
+        if ($invitation->status !== 'pending') {
+            return redirect()->route('dashboard')
+                ->with('info', 'Invitation déjà traitée.');
+        }
+
+        $invitation->update([
+            'status' => 'refused'
+        ]);
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Invitation refusée.');
     }
 }
