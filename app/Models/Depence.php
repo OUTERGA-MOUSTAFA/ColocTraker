@@ -1,21 +1,31 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Depence extends Model
 {
-    function user()
+    protected $fillable = [
+        'titre',
+        'description',
+        'montant',
+        'user_id',
+        'colocation_id',
+        'category_id',
+    ];
+
+    public function user()
     {
-        return $this->hasMany(Depence::class);
+        return $this->belongsTo(User::class);
     }
-    function colocation()
+
+    public function colocation()
     {
-        return $this->hasMany(Depence::class);
+        return $this->belongsTo(Colocation::class);
     }
-    function categorie()
+
+    public function category()
     {
-        return $this->hasOne(Categories::class);
+        return $this->belongsTo(Categories::class);
     }
 }

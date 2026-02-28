@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CategoriesController;
 use App\Http\Controllers\ColocationController;
+use App\Http\Controllers\DepenceController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -16,16 +17,24 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [ColocationController::class, 'colocations'])->name('dashboard');
 
     Route::prefix('colocation')->group(function () {
+        
         Route::get('/{id}', [ColocationController::class, 'show'])->name('colocation.show');
         Route::post('/', [ColocationController::class, 'store'])->name('colocation.store');
+        
         // Member leaves
-        Route::delete('/{id}/leave', [ColocationController::class, 'leaveColocation'])->name('colocation.leave');
+        Route::delete('/{colocation}/leave', [ColocationController::class, 'leaveColocation'])->name('colocation.leave');
+        
         // Ownera
-        Route::delete('/{id}/cancel', [ColocationController::class, 'cancelColocation'])->name('colocation.cancel');
-
+        Route::delete('/{colocation}/cancel', [ColocationController::class, 'cancelColocation'])->name('colocation.cancel');
+        Route::post('/{id}/transfer-owner/{newOwner}', [ColocationController::class, 'transferOwnership'])->name('colocation.transferOwner');
+        
         // Category routes
         Route::post('/{colocationId}/categories', [CategoriesController::class, 'store'])->name('categories.store');
         Route::delete('/{colocationId}/categories/{categoryId}', [CategoriesController::class, 'destroy'])->name('categories.destroy');
+        
+        // Depence routes
+        Route::post('/{colocation}/depences',[DepenceController::class, 'store'])->name('depences.store');
+        Route::delete('/depences/{depence}',[DepenceController::class, 'destroy'])->name('depences.destroy');
     });
 
     Route::prefix('invitation')->group(function () {

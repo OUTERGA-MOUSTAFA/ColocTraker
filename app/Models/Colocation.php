@@ -13,7 +13,7 @@ class Colocation extends Model
         'description',
     ];
 
-    public function depence()
+    public function depences()
     {
         return $this->HasMany(Depence::class);
     }
@@ -22,14 +22,20 @@ class Colocation extends Model
     {
         return $this->HasMany(Invitation::class);
     }
-    public function categories(){
+    public function categories()
+    {
         return $this->hasMany(Categories::class);
     }
-    
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class) // clé etrange
             ->withPivot('role', 'left_at')
             ->withTimestamps();
+    }
+
+    public function owner()
+    {
+        return $this->users()->wherePivot('role', 'owner')->first();
     }
 }

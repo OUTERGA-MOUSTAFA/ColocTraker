@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_banned',
+        'reputation_score'
     ];
 
     /**
@@ -48,28 +49,36 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
     public function colocation(): BelongsToMany
     {
         return $this->belongsToMany(Colocation::class)
             ->withPivot('role', 'left_at')
             ->withTimestamps();
     }
-
-    public function depence()
+    public function depences()
     {
-       return $this->HasMany(Depence::class);
+        return $this->HasMany(Depence::class);
     }
     public function categorie()
     {
-       return $this->HasMany(Categories::class);
+        return $this->HasMany(Categories::class);
     }
 
     public function invitation()
     {
-       return $this->HasMany(Invitation::class);
+        return $this->HasMany(Invitation::class);
     }
     public function isAdmin()
     {
         return $this->role === 'admin';
+    }
+
+    public function isOwnerOf(Colocation $colocation): bool
+    {
+        return $this->colocations()
+            ->where('colocation_id', $colocation->id)
+            ->wherePivot('role', 'owner')
+            ->exists();
     }
 }
