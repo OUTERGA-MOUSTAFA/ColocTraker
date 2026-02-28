@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Depence;
@@ -11,25 +12,31 @@ class DepenceController extends Controller
     {
         $request->validate([
             'titre' => 'required|string|max:255',
-            'description' => 'nullable|string|max:500',
-            'montant' => 'required|numeric|min:0.01',
-            'category_id' => 'nullable|exists:categories,id'
+            'description' => 'required|string|max:255',
+            'montant' => 'required|numeric|min:1',
+            'user_id' => 'required|exists:users,id',
+            'category_id' => 'required|exists:categories,id',
         ]);
 
-        // تأكد user عضو active
-        if (!$colocation->users()
-            ->where('user_id', auth()->id())
-            ->wherePivotNull('left_at')
-            ->exists()) {
-
-            abort(403);
+        // check if is active
+        if (!$colocation->users()->where('user_id', auth()->id())->wherePivotNull('left_at')->exists()) {
+            abort(403, 'Not avtive on this colocation');
         }
 
+        // check if user will payer in coloc
+        if (
+            !$colocation->users()
+                ->where('user_id', $request->user_id)
+                ->wherePivotNull('left_at')
+                ->exists()
+        ) {
+            abort(403, 'User not in this colocation');
+        }
         Depence::create([
             'titre' => $request->titre,
             'description' => $request->description,
             'montant' => $request->montant,
-            'user_id' => auth()->id(),
+            'user_id' => $request->user_id,
             'colocation_id' => $colocation->id,
             'category_id' => $request->category_id,
         ]);

@@ -56,17 +56,18 @@ class InvitationController extends Controller
     {
         $invitation = Invitation::where('token', $token)->firstOrFail();
 
-
         if (!auth()->check()) {
             return redirect()->route('login');
         }
-        // expired link
+
+        // expired
         if ($invitation->expires_at && $invitation->expires_at < now()) {
             $invitation->update(['status' => 'expired']);
             return redirect()->route('dashboard')
                 ->with('error', 'L’invitation a expiré.');
         }
-        // same email
+
+        // email check
         if (auth()->user()->email !== $invitation->email) {
             abort(403, 'Cette invitation ne vous appartient pas.');
         }
@@ -77,10 +78,26 @@ class InvitationController extends Controller
         }
 
         $colocation = $invitation->colocation;
+        $userId = auth()->id();
 
-        if (!$colocation->users()->where('user_id', auth()->id())->exists()) {
-            $colocation->users()->attach(auth()->id(), [
+        // check if was already member on this coloc
+        $existing = $colocation->users()
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($existing) {
+
+            // change left_at to null and role member, to be active on coloc
+            $colocation->users()->updateExistingPivot($userId, [
+                'left_at' => null,
                 'role' => 'member'
+            ]);
+        } else {
+
+            // return to colocation again
+            $colocation->users()->attach($userId, [
+                'role' => 'member',
+                'created_at' => now()
             ]);
         }
 
@@ -88,13 +105,10 @@ class InvitationController extends Controller
             'status' => 'accepted',
             'accepted_at' => now()
         ]);
-        $colocationName = $colocation->name;
-        return redirect()
-            ->route('colocation.show', $colocation->id)
-            ->with('success', 'Bienvenue dans ' . $colocationName);
+
+        return redirect()->route('colocation.show', $colocation->id)
+                        ->with('success', 'Bienvenue dans ' . $colocation->name);
     }
-
-
     public function refuse($token)
     {
         $invitation = Invitation::where('token', $token)->firstOrFail();

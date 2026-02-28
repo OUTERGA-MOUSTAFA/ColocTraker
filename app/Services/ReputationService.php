@@ -18,4 +18,10 @@ class ReputationService
             $user->increment('reputation_score');
         }
     }
+    function getReputationUsers(Colocation $colocation){
+        return $colocation->users()
+        ->select('users.id', 'users.reputation_score')
+        ->get()
+        ->keyBy('id');
+    }
 }

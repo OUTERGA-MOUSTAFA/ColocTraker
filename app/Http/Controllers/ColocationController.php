@@ -21,29 +21,32 @@ class ColocationController extends Controller
     function colocations()
     {
 
-    $colocations = Colocation::whereHas('users', function ($query) {
+        $colocations = Colocation::whereHas('users', function ($query) {
             $query->where('user_id', auth()->id());
         })
-        ->with(['users' => function ($query) {
-            $query->where('user_id', auth()->id());
-        }])
-        ->get();
-      
+            ->with(['users' => function ($query) {
+                $query->where('user_id', auth()->id());
+            }])
+            ->get();
+
         return view('colocation.colocations', compact('colocations'));
     }
 
-    public function show($id, BalanceService $balanceService)
+    public function show($id, BalanceService $balanceService, ReputationService $reputation)
     {
         $colocation = Colocation::findOrFail($id);
 
         $data = $balanceService->getColocationBalances($colocation);
+        $reputations = $reputation->getReputationUsers($colocation);
 
         return view('colocation.index', [
+            'members'     => $colocation->users,
+            'colocation'  => $colocation,
             'membersCount' => $data['membersCount'],
-            'colocation' => $colocation,
-            'total'      => $data['total'],
-            'share'      => $data['share'],
-            'balances'   => $data['balances'],
+            'total'       => $data['total'],
+            'share'       => $data['share'],
+            'balances'    => $data['balances'],
+            'reputations' => $reputations,
         ]);
     }
 
@@ -79,7 +82,6 @@ class ColocationController extends Controller
 
     public function leaveColocation(
         Colocation $colocation,
-        BalanceService $balanceService
     ) {
         $user = auth()->user();
 
@@ -176,5 +178,37 @@ class ColocationController extends Controller
         );
 
         return back()->with('success', 'Ownership transferred.');
+    }
+
+    public function removeMember($colocationId, $userId)
+    {
+        $colocation = Colocation::findOrFail($colocationId);
+        $user = User::findOrFail($userId);
+
+        // Check if current user is owner
+        if (auth()->user()->id !== $colocation->users()->wherePivot('role', 'owner')->first()->id) {
+            return redirect()->back()->with('error', 'Seul le propriétaire peut retirer des membres.');
+        }
+
+        // Check if user is not the owner
+        $pivot = $colocation->users()->where('user_id', $userId)->first();
+        if ($pivot && $pivot->pivot->role === 'owner') {
+            return redirect()->back()->with('error', 'Impossible de retirer le propriétaire.');
+        }
+
+        // Check reputation before removing
+        $balanceService = app(BalanceService::class);
+        $hasDebt = $balanceService->hasDebt($user, $colocation);
+
+        // Remove user from colocation
+        $colocation->users()->detach($userId);
+
+        // Update reputation if they had debt
+        if ($hasDebt) {
+            $user->decrement('reputation_score');
+        }
+
+        return redirect()->route('colocation.show', $colocation->id)
+            ->with('success', 'Le membre a été retiré de la colocation.');
     }
 }

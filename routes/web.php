@@ -27,7 +27,8 @@ Route::middleware(['auth'])->group(function () {
         // Ownera
         Route::delete('/{colocation}/cancel', [ColocationController::class, 'cancelColocation'])->name('colocation.cancel');
         Route::post('/{id}/transfer-owner/{newOwner}', [ColocationController::class, 'transferOwnership'])->name('colocation.transferOwner');
-        
+
+        Route::delete('/{colocation}/members/{user}/remove', [ColocationController::class, 'removeMember'])->name('colocation.removeMember');
         // Category routes
         Route::post('/{colocationId}/categories', [CategoriesController::class, 'store'])->name('categories.store');
         Route::delete('/{colocationId}/categories/{categoryId}', [CategoriesController::class, 'destroy'])->name('categories.destroy');

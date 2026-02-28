@@ -3,7 +3,14 @@
     <div x-data="{ 
         inviteModal: false, 
         deleteModal: false, 
-        expenseModal: false, 
+        expenseModal: {{ 
+            $errors->has('titre') || 
+            $errors->has('description') || 
+            $errors->has('montant') || 
+            $errors->has('user_id') || 
+            $errors->has('category_id') 
+            ? 'true' : 'false' 
+        }}, 
         categoryModal: false 
     }">
         <x-slot name="header">
@@ -115,7 +122,7 @@
                                 <div class="ml-4">
                                     <p class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total dépenses</p>
                                     <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                        {{ number_format($total, 2) }}€
+                                        {{ number_format($total, 2) }}Dh
                                     </p>
                                 </div>
                             </div>
@@ -157,7 +164,7 @@
                                     @endphp
 
                                     <p class="text-2xl font-bold {{ $balance >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                        {{ number_format($balance, 2) }}€
+                                        {{ number_format($balance, 2) }}Dh
                                     </p>
                                 </div>
                             </div>
@@ -284,26 +291,26 @@
                                 @endif
 
                                 {{-- Members Section --}}
-                                @if($membersCount > 0)
+                                @if($colocation->users->where('pivot.role', 'member')->count() > 0)
                                 <div>
                                     <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
                                         <svg class="h-4 w-4 mr-1 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
                                             <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path>
                                         </svg>
-                                        Membres ({{ $membersCount }})
+                                        Members ({{ $colocation->users->where('pivot.role', 'member')->count() }})
                                     </h4>
                                     <div class="space-y-3">
                                         @foreach($members as $user)
                                         @php
                                         $userBalance = collect($balances)->firstWhere('user.id', $user->id);
+                                        $balance = $userBalance['balance'] ?? 0;
+                                        $reputation = $reputations[$user->id]->reputation_score ?? 0;
+
+
                                         @endphp
-                                        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl hover:shadow-md transition-all duration-200 transform hover:scale-[1.02]">
+                                        <div class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl hover:shadow-md transition-all duration-200">
                                             <div class="flex items-center space-x-3">
-                                                <div class="flex-shrink-0">
-                                                    <div class="h-10 w-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-                                                        {{ strtoupper(substr($user->name, 0, 1)) }}
-                                                    </div>
-                                                </div>
+
                                                 <div>
                                                     <div class="flex items-center flex-wrap gap-2">
                                                         <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -320,15 +327,52 @@
                                                         <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                                         </svg>
-                                                        Membre depuis {{ \Carbon\Carbon::parse($user->pivot->joined_at ?? $user->pivot->created_at)->format('d/m/Y') }}
+                                                        depuis {{ \Carbon\Carbon::parse($user->pivot->joined_at ?? $user->pivot->created_at)->format('d/m/Y') }}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div class="text-right">
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">Solde</p>
-                                                <p class="text-sm font-bold {{ $userBalance['balance'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                                    {{ number_format($userBalance['balance'] ?? 0, 2) }}€
-                                                </p>
+
+                                            <div class="flex items-center space-x-4">
+                                                <div class="text-right mr-4">
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400">Solde</p>
+                                                    <p class="text-sm font-bold {{ $userBalance['balance'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                                        {{ number_format($userBalance['balance'] ?? 0, 2) }}Dh
+                                                    </p>
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Reputation</p>
+                                                    <p class="text-sm font-bold {{ $reputation >= 0 ? 'text-blue-600' : 'text-red-600' }}">
+                                                        {{ $reputation }}
+                                                    </p>
+                                                </div>
+
+                                                @if($isOwner && $user->id !== auth()->id())
+                                                <div class="flex space-x-2">
+                                                    {{-- Transfer Ownership Button --}}
+                                                    <form action="{{ route('colocation.transferOwner', [$colocation->id, $user->id]) }}"
+                                                        method="POST"
+                                                        onsubmit="return confirm('Êtes-vous sûr de vouloir transférer la propriété à {{ $user->name }} ? Cette action est irréversible.');">
+                                                        @csrf
+                                                        @method('POST')
+                                                        <button type="submit"
+                                                            class="text-yellow-600 hover:text-yellow-900 bg-yellow-100 hover:bg-yellow-200 p-2 rounded-full transition-colors duration-200"
+                                                            title="Transférer la propriété">
+                                                            Tansfer
+                                                        </button>
+                                                    </form>
+
+                                                    {{-- Remove Member Button --}}
+                                                    <form action="{{ route('colocation.removeMember', [$colocation->id, $user->id]) }}"
+                                                        method="POST"
+                                                        onsubmit="return confirm('Êtes-vous sûr de vouloir retirer {{ $user->name }} de la colocation ?');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit"
+                                                            class="text-red-600 hover:text-red-900 bg-red-100 hover:bg-red-200 p-2 rounded-full transition-colors duration-200"
+                                                            title="Retirer le membre">
+                                                            out
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                                @endif
                                             </div>
                                         </div>
                                         @endforeach
@@ -415,70 +459,92 @@
                                 @php
                                 $debtors = collect($balances)->filter(function($balance) {
                                 return $balance['balance'] < 0;
-                                    });
-                                    $creditors=collect($balances)->filter(function($balance) {
-                                    return $balance['balance'] > 0;
-                                    });
-                                    @endphp
+                                    })->values();
 
-                                    @if($debtors->isEmpty() && $creditors->isEmpty())
-                                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-8 text-center">
-                                        <svg class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                        </svg>
-                                        <p class="text-gray-500 dark:text-gray-400">Aucune dette pour le moment. Tout le monde est à jour !</p>
-                                    </div>
-                                    @else
-                                    <div class="space-y-4">
-                                        @foreach($debtors as $debtor)
-                                        @foreach($creditors as $creditor)
-                                        @if($debtor['user']->id != $creditor['user']->id)
-                                        @php
-                                        $amount = min(abs($debtor['balance']), $creditor['balance']);
+                                    $creditors = collect($balances)->filter(function($balance) {
+                                    return $balance['balance'] > 0;
+                                    })->values();
+
+                                    $settlements = [];
+
+                                    foreach ($debtors as $debtor) {
+                                    $debtAmount = abs($debtor['balance']);
+
+                                    foreach ($creditors as $creditor) {
+                                    if ($debtAmount <= 0) break;
+
+                                        $creditAmount=$creditor['balance'];
+                                        if ($creditAmount <=0) continue;
+
+                                        $amount=min($debtAmount, $creditAmount);
+
+                                        if ($amount> 0) {
+                                        $settlements[] = [
+                                        'from' => $debtor['user'],
+                                        'to' => $creditor['user'],
+                                        'amount' => $amount
+                                        ];
+
+                                        // Update remaining amounts
+                                        $debtAmount -= $amount;
+
+                                        // Update creditor balance in the collection (for next iterations)
+                                        $creditor['balance'] -= $amount;
+                                        }
+                                        }
+                                        }
                                         @endphp
-                                        @if($amount > 0)
-                                        <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4">
-                                            <div class="flex items-center justify-between">
-                                                <div class="flex items-center space-x-3">
-                                                    <div class="flex-shrink-0">
-                                                        <div class="h-10 w-10 rounded-full bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-center text-white font-bold">
-                                                            {{ strtoupper(substr($debtor['user']->name, 0, 1)) }}
+                                        <!-- dettes -->
+                                        @if(empty($settlements))
+                                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-8 text-center">
+                                            <svg class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <p class="text-gray-500 dark:text-gray-400">Aucune dette pour le moment. Tout le monde est à jour !</p>
+                                        </div>
+                                        @else
+                                        <div class="space-y-4">
+                                            @foreach($settlements as $settlement)
+                                            <div class="bg-gradient-to-r from-red-50 to-orange-50 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center space-x-3">
+                                                        <div class="flex-shrink-0">
+                                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-center text-white font-bold">
+                                                                {{ strtoupper(substr($settlement['from']->name, 0, 1)) }}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                                {{ $settlement['from']->name }}
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 dark:text-gray-400">doit</p>
                                                         </div>
                                                     </div>
-                                                    <div>
-                                                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                            {{ $debtor['user']->name }}
-                                                        </p>
-                                                        <p class="text-xs text-gray-500 dark:text-gray-400">doit</p>
-                                                    </div>
-                                                </div>
 
-                                                <div class="text-center">
-                                                    <p class="text-2xl font-bold text-red-600">{{ number_format($amount, 2) }}€</p>
-                                                    <p class="text-xs text-gray-500 dark:text-gray-400">à</p>
-                                                </div>
-
-                                                <div class="flex items-center space-x-3">
-                                                    <div class="text-right">
-                                                        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                                                            {{ $creditor['user']->name }}
-                                                        </p>
-                                                        <p class="text-xs text-gray-500 dark:text-gray-400">reçoit</p>
+                                                    <div class="text-center">
+                                                        <p class="text-2xl font-bold text-red-600">{{ number_format($settlement['amount'], 2) }}Dh</p>
+                                                        <p class="text-xs text-gray-500 dark:text-gray-400">à</p>
                                                     </div>
-                                                    <div class="flex-shrink-0">
-                                                        <div class="h-10 w-10 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center text-white font-bold">
-                                                            {{ strtoupper(substr($creditor['user']->name, 0, 1)) }}
+
+                                                    <div class="flex items-center space-x-3">
+                                                        <div class="text-right">
+                                                            <p class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                                                {{ $settlement['to']->name }}
+                                                            </p>
+                                                            <p class="text-xs text-gray-500 dark:text-gray-400">reçoit</p>
+                                                        </div>
+                                                        <div class="flex-shrink-0">
+                                                            <div class="h-10 w-10 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center text-white font-bold">
+                                                                {{ strtoupper(substr($settlement['to']->name, 0, 1)) }}
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
+                                            @endforeach
                                         </div>
                                         @endif
-                                        @endif
-                                        @endforeach
-                                        @endforeach
-                                    </div>
-                                    @endif
+
                             </div>
                         </div>
 
@@ -529,8 +595,22 @@
                                                 </div>
                                             </div>
                                             <div class="text-right">
-                                                <p class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($depence->montant, 2) }}€</p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">Part: {{ number_format($share, 2) }}€</p>
+                                                <p class="text-xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($depence->montant, 2) }}Dh</p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400">Part: {{ number_format($share, 2) }}Dh</p>
+                                                @if($depence->user_id === auth()->id())
+                                                <form action="{{ route('depences.destroy', $depence) }}"
+                                                    method="POST"
+                                                    onsubmit="return confirm('Supprimer cette dépense ?')"
+                                                    class="mt-2">
+                                                    @csrf
+                                                    @method('DELETE')
+
+                                                    <button type="submit"
+                                                        class="text-xs text-red-500 hover:text-red-700 font-semibold">
+                                                        Supprimer
+                                                    </button>
+                                                </form>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -573,7 +653,7 @@
                         </label>
                         <input type="email"
                             name="email"
-                            required
+
                             class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
                     </div>
 
@@ -593,6 +673,7 @@
         </div>
 
         {{-- MODAL DÉPENSE --}}
+
         <div x-show="expenseModal"
             x-transition
             class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
@@ -607,7 +688,7 @@
                     @csrf
                     <div class="mb-4">
                         <label class="block text-gray-700 dark:text-gray-300 mb-1">Titre</label>
-                        <input type="text" name="titre" required
+                        <input type="text" name="titre"
                             class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             value="{{ old('titre') }}">
                         @error('titre')
@@ -625,8 +706,24 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="block text-gray-700 dark:text-gray-300 mb-1">Montant (€)</label>
-                        <input type="number" step="0.01" name="montant" required
+                        <label class="block text-gray-700 dark:text-gray-300 mb-1">Payé par</label>
+                        <select name="user_id"
+                            class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                            <option value="">Sélectionner la personne qui a payé</option>
+                            @foreach($colocation->users as $user)
+                            <option value="{{ $user->id }}" {{ old('user_id', auth()->id()) == $user->id ? 'selected' : '' }}>
+                                {{ $user->name }} @if($user->pivot->role === 'owner')(Propriétaire)@endif
+                            </option>
+                            @endforeach
+                        </select>
+                        @error('user_id')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-300 mb-1">Montant (Dh)</label>
+                        <input type="number" step="0.01" name="montant"
                             class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                             value="{{ old('montant') }}">
                         @error('montant')
@@ -741,7 +838,7 @@
                         <input type="text"
                             name="name"
                             placeholder="Nom de la catégorie"
-                            required
+
                             class="flex-1 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-purple-500 focus:ring-purple-500">
                         <button type="submit"
                             class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded inline-flex items-center">
