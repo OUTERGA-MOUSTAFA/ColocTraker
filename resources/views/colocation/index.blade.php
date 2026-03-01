@@ -376,12 +376,12 @@
                                                     Owner depuis {{ \Carbon\Carbon::parse($owner->pivot->joined_at ?? $owner->pivot->created_at)->format('d/m/Y') }}
                                                 </p>
                                                 @php
-                                                $currentBalance = $balances[$owner->id] ?? 0;
-                                                @endphp
+$ownerBalance = $balances[$owner->id] ?? 0;
+@endphp
 
-                                                <p class="text-2xl font-bold {{ $currentBalance >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                                    {{ number_format($currentBalance, 2) }} Dh
-                                                </p>
+<p class="text-2xl font-bold {{ $ownerBalance >= 0 ? 'text-green-600' : 'text-red-600' }}">
+    {{ number_format($ownerBalance, 2) }} Dh
+</p>
                                             </div>
                                         </div>
                                     </div>
