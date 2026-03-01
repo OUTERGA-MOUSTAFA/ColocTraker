@@ -5,6 +5,7 @@ use App\Http\Controllers\ColocationController;
 use App\Http\Controllers\DepenceController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettlementController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => view('welcome'));
@@ -36,6 +37,9 @@ Route::middleware(['auth'])->group(function () {
         // Depence routes
         Route::post('/{colocation}/depences',[DepenceController::class, 'store'])->name('depences.store');
         Route::delete('/depences/{depence}',[DepenceController::class, 'destroy'])->name('depences.destroy');
+
+        // payer depence
+        Route::post('/{colocation}/settlements/mark-paid',[SettlementController::class, 'markPaid'])->name('settlements.mark-paid');
     });
 
     Route::prefix('invitation')->group(function () {

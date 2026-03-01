@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Colocation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Settlement;
+use App\models\User;
 use App\Services\BalanceService;
 use App\Services\ReputationService;
 
@@ -34,20 +36,51 @@ class ColocationController extends Controller
 
     public function show($id, BalanceService $balanceService, ReputationService $reputation)
     {
-        $colocation = Colocation::findOrFail($id);
+        $colocation = Colocation::whereHas('users', function ($q) {
+            $q->where('user_id', auth()->id())
+                ->whereNull('colocation_user.left_at');
+        })->with([
+            'depences',
+            'users' => function ($q) {
+                $q->wherePivotNull('left_at');
+            }
+        ])->findOrFail($id);
 
         $data = $balanceService->getColocationBalances($colocation);
-        $reputations = $reputation->getReputationUsers($colocation);
 
-        return view('colocation.index', [
-            'members'     => $colocation->users,
-            'colocation'  => $colocation,
-            'membersCount' => $data['membersCount'],
-            'total'       => $data['total'],
-            'share'       => $data['share'],
-            'balances'    => $data['balances'],
-            'reputations' => $reputations,
-        ]);
+        $balances = $data['balances']->keyBy(function ($item) {
+            return $item['user']->id;
+        });
+
+        $reputations = $reputation
+            ->getReputationUsers($colocation)
+            ->keyBy('user_id');
+
+        $owner  = $colocation->users->where('pivot.role', 'owner')->first();
+        $members = $colocation->users->where('pivot.role', 'member');
+
+        $activeUserIds = $colocation->users->pluck('id');
+
+        $debts = Settlement::where('colocation_id', $colocation->id)
+            ->where('is_paid', false)
+            ->whereIn('from_user_id', $activeUserIds)
+            ->whereIn('to_user_id', $activeUserIds)
+            ->with(['fromUser', 'toUser'])
+            ->get();
+        $balances = $data['balances'];
+        // dd($balances);
+        $total = $data['total'];
+        $share = $data['share'];
+        return view('colocation.index', compact(
+            'colocation',
+            'owner',
+            'members',
+            'balances',
+            'reputations',
+            'total',
+            'share',
+            'debts'
+        ));
     }
 
 
@@ -200,8 +233,29 @@ class ColocationController extends Controller
         $balanceService = app(BalanceService::class);
         $hasDebt = $balanceService->hasDebt($user, $colocation);
 
+        $balance = $balanceService->calculateBalance($user, $colocation);
+
+        if ($balance < 0) {
+
+            $debtAmount = abs($balance);
+
+            // نجيب owner
+            $idOwner = auth()->id();
+
+            // نخلق depence جديدة باسم owner
+            $colocation->depences()->create([
+                'user_id' => $idOwner,
+                'titre' => 'Debt adjustment for removed member',
+                'description' => 'Debt transferred from ' . $user->name,
+                'montant' => $debtAmount,
+            ]);
+        }
         // Remove user from colocation
-        $colocation->users()->detach($userId);
+        //$colocation->users()->detach($userId);
+        // update pivot
+        $colocation->users()->updateExistingPivot($user->id, [
+            'left_at' => now()
+        ]);
 
         // Update reputation if they had debt
         if ($hasDebt) {

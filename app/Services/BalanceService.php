@@ -9,14 +9,14 @@ class BalanceService
 {
     public function hasDebt(User $user, Colocation $colocation): bool
     {
-        $balance = $this->calculateBalance($user, $colocation);
-
-        return $balance < 0;
+        return $this->calculateBalance($user, $colocation) < 0;
     }
 
     public function calculateBalance(User $user, Colocation $colocation): float
     {
+        // relations خاصها تكون already loaded
         $depences = $colocation->depences;
+        $activeUsers = $colocation->users;
 
         $totalPaid = $depences
             ->where('user_id', $user->id)
@@ -24,53 +24,48 @@ class BalanceService
 
         $totalAmount = $depences->sum('montant');
 
-        // $membersCount = $colocation->users()
-        //     ->wherePivotNull('left_at')
-        //     ->count();
-        //$membersCount = max($colocation->users->count(), 1);
-        $membersCount = max( $colocation->users()->whereNull('colocation_user.left_at')->count(),1);// just for errors and 
-
-        if ($membersCount === 0) return 0;
+        $membersCount = max($activeUsers->count(), 1);
 
         $individualShare = $totalAmount / $membersCount;
 
-        return $totalPaid - $individualShare;
+        return round($totalPaid - $individualShare, 2);
     }
 
     public function getColocationBalances(Colocation $colocation): array
-{
-    $colocation->load([
-        'depences',
-        'users' => function ($query) {
-            $query->wherePivotNull('left_at');
-        }
-    ]);
+    {
+        // نفترض users + depences loaded من controller
 
-    $total = $colocation->depences->sum('montant');
+        $depences = $colocation->depences;
+        $activeUsers = $colocation->users;
 
-    $membersCount = max($colocation->users->count(), 1);
+        $total = $depences->sum('montant');
 
-    $share = $total / $membersCount;
+        $membersCount = max($activeUsers->count(), 1);
 
-    $balances = $colocation->users->map(function ($user) use ($colocation, $share) {
+        $share = $membersCount > 0
+            ? round($total / $membersCount, 2)
+            : 0;
 
-        $paid = $colocation->depences
-            ->where('user_id', $user->id)
-            ->sum('montant');
+        $balances = $activeUsers->map(function ($user) use ($colocation) {
+
+            $balance = $this->calculateBalance($user, $colocation);
+
+            return [
+                'user'    => $user,
+                'paid'    => $colocation->depences
+                                    ->where('user_id', $user->id)
+                                    ->sum('montant'),
+                'share'   => $colocation->depences->sum('montant') / 
+                             max($colocation->users->count(), 1),
+                'balance' => $balance,
+            ];
+        });
 
         return [
-            'user'    => $user,
-            'paid'    => $paid,
-            'share'   => $share,
-            'balance' => $paid - $share,
+            'membersCount' => $membersCount,
+            'total'        => $total,
+            'share'        => $share,
+            'balances'     => $balances,
         ];
-    });
-
-    return [
-        'membersCount' => $membersCount,
-        'total'    => $total,
-        'share'    => $share,
-        'balances' => $balances,
-    ];
-}
+    }
 }

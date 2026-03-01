@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Depence;
 use App\Models\Colocation;
+use App\Models\Settlement;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DepenceController extends Controller
 {
@@ -32,7 +34,7 @@ class DepenceController extends Controller
         ) {
             abort(403, 'User not in this colocation');
         }
-        Depence::create([
+        $depence = Depence::create([
             'titre' => $request->titre,
             'description' => $request->description,
             'montant' => $request->montant,
@@ -40,7 +42,38 @@ class DepenceController extends Controller
             'colocation_id' => $colocation->id,
             'category_id' => $request->category_id,
         ]);
+        // Get active members
+        /* settlements automatically */
+        $members = $colocation->users()
+            ->wherePivotNull('left_at')
+            ->get();
 
+        $membersCount = $members->count();
+        if ($membersCount > 1) {
+
+            $share = round($depence->montant / $membersCount, 2);
+
+            foreach ($members as $member) {
+
+                // no dettes with yourself
+                if ($member->id == $request->user_id) {
+                    continue;
+                }
+
+                $settlement = Settlement::updateOrCreate(
+                    [
+                        'colocation_id' => $colocation->id,
+                        'from_user_id'  => $member->id,          //how will pay
+                        'to_user_id'    => $request->user_id,    // how pay
+                        'is_paid'       => false,
+                    ],
+                    [
+                        'amount' => 0
+                    ]
+                );
+                $settlement->increment('amount', $share);
+            }
+        }
         return back()->with('success', 'Dépense ajoutée.');
     }
 
