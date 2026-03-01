@@ -7,16 +7,13 @@ use App\Models\Colocation;
 
 class BalanceService
 {
-    public function hasDebt(User $user, Colocation $colocation): bool
-    {
-        return $this->calculateBalance($user, $colocation) < 0;
-    }
-
     public function calculateBalance(User $user, Colocation $colocation): float
     {
-        // relations خاصها تكون already loaded
         $depences = $colocation->depences;
-        $activeUsers = $colocation->users;
+
+        $activeUsers = $colocation->users()
+            ->wherePivotNull('left_at')
+            ->get();
 
         $totalPaid = $depences
             ->where('user_id', $user->id)
@@ -31,41 +28,87 @@ class BalanceService
         return round($totalPaid - $individualShare, 2);
     }
 
-    public function getColocationBalances(Colocation $colocation): array
+    public function getColocationBalances(Colocation $colocation)
     {
-        // نفترض users + depences loaded من controller
-
+        $users = $colocation->users;
         $depences = $colocation->depences;
-        $activeUsers = $colocation->users;
 
-        $total = $depences->sum('montant');
+        $membersCount = $users->count();
+        $total = $depences->sum('montant'); 
+        $share = $membersCount > 0 ? $total / $membersCount : 0;
 
-        $membersCount = max($activeUsers->count(), 1);
+        $balances = [];
 
-        $share = $membersCount > 0
-            ? round($total / $membersCount, 2)
-            : 0;
+        foreach ($users as $user) {
 
-        $balances = $activeUsers->map(function ($user) use ($colocation) {
+            $paidAmount = $depences
+                ->where('user_id', $user->id)
+                ->sum('montant');
 
-            $balance = $this->calculateBalance($user, $colocation);
+            $balance = round($paidAmount - $share, 2);
 
-            return [
-                'user'    => $user,
-                'paid'    => $colocation->depences
-                                    ->where('user_id', $user->id)
-                                    ->sum('montant'),
-                'share'   => $colocation->depences->sum('montant') / 
-                             max($colocation->users->count(), 1),
-                'balance' => $balance,
-            ];
-        });
+            $balances[$user->id] = $balance;
+        }
 
+        // correct calcule from settelments
+        $settlements = $colocation->settlements()
+            ->where('is_paid', false)
+            ->get();
+
+        foreach ($settlements as $settlement) {
+
+            // i will give your money
+            $balances[$settlement->from_user_id] += $settlement->amount;
+
+            // give me my money
+            $balances[$settlement->to_user_id] -= $settlement->amount;
+        }
+$transactions = $this->simplifyDebts($balances);
         return [
             'membersCount' => $membersCount,
-            'total'        => $total,
-            'share'        => $share,
-            'balances'     => $balances,
+            'total' => $total,
+            'share' => $share,
+            'balances' => $balances,
+            'transactions' => $transactions,
         ];
+    }
+    private function simplifyDebts(array $balances)
+    {
+        $creditors = [];
+        $debtors = [];
+        $transactions = [];
+
+        foreach ($balances as $userId => $balance) {
+            if ($balance > 0) {
+                $creditors[] = ['id' => $userId, 'amount' => $balance];
+            } elseif ($balance < 0) {
+                $debtors[] = ['id' => $userId, 'amount' => abs($balance)];
+            }
+        }
+
+        $i = 0;
+        $j = 0;
+
+        while ($i < count($debtors) && $j < count($creditors)) {
+
+            $debtAmount = $debtors[$i]['amount'];
+            $creditAmount = $creditors[$j]['amount'];
+
+            $amount = min($debtAmount, $creditAmount);
+
+            $transactions[] = [
+                'from' => $debtors[$i]['id'],
+                'to' => $creditors[$j]['id'],
+                'amount' => round($amount, 2),
+            ];
+
+            $debtors[$i]['amount'] -= $amount;
+            $creditors[$j]['amount'] -= $amount;
+
+            if ($debtors[$i]['amount'] == 0) $i++;
+            if ($creditors[$j]['amount'] == 0) $j++;
+        }
+
+        return $transactions;
     }
 }

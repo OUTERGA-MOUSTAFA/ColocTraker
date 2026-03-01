@@ -18,6 +18,11 @@ class Colocation extends Model
         return $this->HasMany(Depence::class);
     }
 
+    public function settlements()
+    {
+        return $this->hasMany(Settlement::class);
+    }
+
     public function invitations()
     {
         return $this->HasMany(Invitation::class);

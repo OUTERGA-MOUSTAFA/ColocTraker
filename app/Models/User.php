@@ -76,7 +76,7 @@ class User extends Authenticatable
 
     public function isOwnerOf(Colocation $colocation): bool
     {
-        return $this->colocations()
+        return $this->colocation()
             ->where('colocation_id', $colocation->id)
             ->wherePivot('role', 'owner')
             ->exists();

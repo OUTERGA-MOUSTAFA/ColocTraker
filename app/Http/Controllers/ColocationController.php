@@ -48,9 +48,12 @@ class ColocationController extends Controller
 
         $data = $balanceService->getColocationBalances($colocation);
 
-        $balances = $data['balances']->keyBy(function ($item) {
-            return $item['user']->id;
-        });
+        $total = $data['total'] ?? 0;
+        $share = $data['share'] ?? 0;
+        $balances = $data['balances'] ?? [];
+
+
+        $transactions = $data['transactions'];
 
         $reputations = $reputation
             ->getReputationUsers($colocation)
@@ -67,20 +70,17 @@ class ColocationController extends Controller
             ->whereIn('to_user_id', $activeUserIds)
             ->with(['fromUser', 'toUser'])
             ->get();
-        $balances = $data['balances'];
-        // dd($balances);
-        $total = $data['total'];
-        $share = $data['share'];
-        return view('colocation.index', compact(
-            'colocation',
-            'owner',
-            'members',
-            'balances',
-            'reputations',
-            'total',
-            'share',
-            'debts'
-        ));
+
+        return view('colocation.index', [
+            'colocation' => $colocation,
+            'owner' => $owner,
+            'members' => $members,
+            'balances' => $balances,
+            'reputations' => $reputations,
+            'total' => $total,
+            'share' => $share,
+            'debts' => $debts,
+        ]);
     }
 
 
