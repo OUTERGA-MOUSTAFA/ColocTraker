@@ -184,7 +184,11 @@ class ColocationController extends Controller
         $currentOwner = auth()->user();
 
         // check is owner
-        if (!$currentOwner->isOwnerOf($colocation)) {
+        if (!$colocation->users()
+            ->where('user_id', auth()->id())
+            ->wherePivot('role', 'owner')
+            ->wherePivotNull('left_at')
+            ->exists()) {
             abort(403);
         }
 
@@ -215,54 +219,53 @@ class ColocationController extends Controller
 
     public function removeMember($colocationId, $userId)
     {
-        $colocation = Colocation::findOrFail($colocationId);
+        $colocation = Colocation::with(['users', 'depences'])->findOrFail($colocationId);
         $user = User::findOrFail($userId);
 
-        // Check if current user is owner
-        if (auth()->user()->id !== $colocation->users()->wherePivot('role', 'owner')->first()->id) {
-            return redirect()->back()->with('error', 'Seul le propriétaire peut retirer des membres.');
-        }
+        // Policy already checks owner, ولكن نخليو safety
+        abort_unless(
+            $colocation->users()
+                ->where('user_id', auth()->id())
+                ->wherePivot('role', 'owner')
+                ->exists(),
+            403
+        );
 
-        // Check if user is not the owner
+        // ممنوع نحيد owner
         $pivot = $colocation->users()->where('user_id', $userId)->first();
         if ($pivot && $pivot->pivot->role === 'owner') {
-            return redirect()->back()->with('error', 'Impossible de retirer le propriétaire.');
+            return back()->with('error', 'Impossible de retirer le propriétaire.');
         }
 
-        // Check reputation before removing
         $balanceService = app(BalanceService::class);
-        $hasDebt = $balanceService->hasDebt($user, $colocation);
+        $data = $balanceService->getColocationBalances($colocation);
+        $balances = $data['balances'] ?? [];
 
-        $balance = $balanceService->calculateBalance($user, $colocation);
+        $balance = $balances[$user->id] ?? 0;
 
+        // 🔥 إلا كان عندو دين
         if ($balance < 0) {
 
             $debtAmount = abs($balance);
+            $ownerId = auth()->id();
 
-            // نجيب owner
-            $idOwner = auth()->id();
-
-            // نخلق depence جديدة باسم owner
-            $colocation->depences()->create([
-                'user_id' => $idOwner,
-                'titre' => 'Debt adjustment for removed member',
-                'description' => 'Debt transferred from ' . $user->name,
-                'montant' => $debtAmount,
+            // نحولو الدين على owner عبر Settlement
+            Settlement::create([
+                'colocation_id' => $colocation->id,
+                'from_user_id'  => $ownerId,      // owner غادي يخلص
+                'to_user_id'    => $user->id,     // باش نصفر balance ديالو
+                'amount'        => $debtAmount,
+                'is_paid'       => false,
             ]);
         }
-        // Remove user from colocation
-        //$colocation->users()->detach($userId);
-        // update pivot
+
+        // نحيد member (soft leave)
         $colocation->users()->updateExistingPivot($user->id, [
             'left_at' => now()
         ]);
 
-        // Update reputation if they had debt
-        if ($hasDebt) {
-            $user->decrement('reputation_score');
-        }
-
-        return redirect()->route('colocation.show', $colocation->id)
+        return redirect()
+            ->route('colocation.show', $colocation->id)
             ->with('success', 'Le membre a été retiré de la colocation.');
     }
 }
