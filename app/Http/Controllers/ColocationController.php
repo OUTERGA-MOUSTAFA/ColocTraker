@@ -9,6 +9,7 @@ use App\Models\Settlement;
 use App\models\User;
 use App\Services\BalanceService;
 use App\Services\ReputationService;
+use Illuminate\Support\Facades\DB;
 
 class ColocationController extends Controller
 {
@@ -36,6 +37,7 @@ class ColocationController extends Controller
 
     public function show($id, BalanceService $balanceService, ReputationService $reputation)
     {
+        
         $colocation = Colocation::whereHas('users', function ($q) {
             $q->where('user_id', auth()->id())
                 ->whereNull('colocation_user.left_at');
@@ -44,7 +46,12 @@ class ColocationController extends Controller
             'users' => function ($q) {
                 $q->wherePivotNull('left_at');
             }
-        ])->findOrFail($id);
+        ])->where('id', $id)->first();
+
+        if (!$colocation) {
+        return redirect()->route('dashboard')
+            ->with('error', 'You are not a member of this colocation.');
+    }
 
         $data = $balanceService->getColocationBalances($colocation);
 
@@ -177,24 +184,23 @@ class ColocationController extends Controller
         );
     }
 
-    public function transferOwnership(
-        Colocation $colocation,
-        $newOwnerId
-    ) {
-        $currentOwner = auth()->user();
+    public function transferOwnership($colocationId, $newOwnerId)
+    {
+        $colocation = Colocation::findOrFail($colocationId);
 
-        // check is owner
-        if (!$colocation->users()
-            ->where('user_id', auth()->id())
-            ->wherePivot('role', 'owner')
+        // check if current user is owner
+        $currentOwner = $colocation->users()
+            ->wherePivot('user_id', auth()->id())
             ->wherePivotNull('left_at')
-            ->exists()) {
+            ->first();
+
+        if (!$currentOwner || $currentOwner->pivot->role !== 'owner') {
             abort(403);
         }
 
-        // check member is active
+        // check new owner is active member
         $newOwner = $colocation->users()
-            ->where('user_id', $newOwnerId)
+            ->wherePivot('user_id', $newOwnerId)
             ->wherePivotNull('left_at')
             ->first();
 
@@ -202,17 +208,22 @@ class ColocationController extends Controller
             return back()->with('error', 'User not valid.');
         }
 
-        // downgrade current owner
-        $colocation->users()->updateExistingPivot(
-            $currentOwner->id,
-            ['role' => 'member']
-        );
+        DB::transaction(function () use ($colocation, $newOwnerId,$currentOwner) {
 
-        // upgrade new owner
-        $colocation->users()->updateExistingPivot(
-            $newOwnerId,
-            ['role' => 'owner']
-        );
+            // reset all owners to member
+            if ($currentOwner) {
+                $colocation->users()->updateExistingPivot(
+                    $currentOwner->id,
+                    ['role' => 'member']
+                );
+            }
+
+            // عيّن owner الجديد
+            $colocation->users()->updateExistingPivot(
+                $newOwnerId,
+                ['role' => 'owner']
+            );
+        });
 
         return back()->with('success', 'Ownership transferred.');
     }
@@ -222,7 +233,7 @@ class ColocationController extends Controller
         $colocation = Colocation::with(['users', 'depences'])->findOrFail($colocationId);
         $user = User::findOrFail($userId);
 
-        // Policy already checks owner, ولكن نخليو safety
+        // Policy already checks owner, safety
         abort_unless(
             $colocation->users()
                 ->where('user_id', auth()->id())
@@ -231,7 +242,7 @@ class ColocationController extends Controller
             403
         );
 
-        // ممنوع نحيد owner
+
         $pivot = $colocation->users()->where('user_id', $userId)->first();
         if ($pivot && $pivot->pivot->role === 'owner') {
             return back()->with('error', 'Impossible de retirer le propriétaire.');
@@ -243,17 +254,17 @@ class ColocationController extends Controller
 
         $balance = $balances[$user->id] ?? 0;
 
-        // 🔥 إلا كان عندو دين
+        // check if member has dettes
         if ($balance < 0) {
 
             $debtAmount = abs($balance);
             $ownerId = auth()->id();
 
-            // نحولو الدين على owner عبر Settlement
+            // transfer dettes to owner
             Settlement::create([
                 'colocation_id' => $colocation->id,
-                'from_user_id'  => $ownerId,      // owner غادي يخلص
-                'to_user_id'    => $user->id,     // باش نصفر balance ديالو
+                'from_user_id'  => $ownerId,
+                'to_user_id'    => $user->id,
                 'amount'        => $debtAmount,
                 'is_paid'       => false,
             ]);

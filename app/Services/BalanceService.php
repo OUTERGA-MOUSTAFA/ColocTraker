@@ -34,7 +34,7 @@ class BalanceService
         $depences = $colocation->depences;
 
         $membersCount = $users->count();
-        $total = $depences->sum('montant'); 
+        $total = $depences->sum('montant');
         $share = $membersCount > 0 ? $total / $membersCount : 0;
 
         $balances = [];
@@ -63,7 +63,7 @@ class BalanceService
             // give me my money
             $balances[$settlement->to_user_id] -= $settlement->amount;
         }
-$transactions = $this->simplifyDebts($balances);
+        $transactions = $this->simplifydettes($balances);
         return [
             'membersCount' => $membersCount,
             'total' => $total,
@@ -72,7 +72,7 @@ $transactions = $this->simplifyDebts($balances);
             'transactions' => $transactions,
         ];
     }
-    private function simplifyDebts(array $balances)
+    private function simplifydettes(array $balances)
     {
         $creditors = [];
         $debtors = [];

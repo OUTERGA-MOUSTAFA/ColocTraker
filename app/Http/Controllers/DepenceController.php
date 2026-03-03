@@ -20,20 +20,17 @@ class DepenceController extends Controller
             'category_id' => 'required|exists:categories,id',
         ]);
 
-        // check if is active
+        // Check if current user is active in this colocation
         if (!$colocation->users()->where('user_id', auth()->id())->wherePivotNull('left_at')->exists()) {
-            abort(403, 'Not avtive on this colocation');
+            abort(403, 'Not active on this colocation');
         }
 
-        // check if user will payer in coloc
-        if (
-            !$colocation->users()
-                ->where('user_id', $request->user_id)
-                ->wherePivotNull('left_at')
-                ->exists()
-        ) {
+        // Check if the payer is a member
+        if (!$colocation->users()->where('user_id', $request->user_id)->wherePivotNull('left_at')->exists()) {
             abort(403, 'User not in this colocation');
         }
+
+        // Create the depense
         $depence = Depence::create([
             'titre' => $request->titre,
             'description' => $request->description,
@@ -42,38 +39,35 @@ class DepenceController extends Controller
             'colocation_id' => $colocation->id,
             'category_id' => $request->category_id,
         ]);
+
         // Get active members
-        /* settlements automatically */
-        $members = $colocation->users()
-            ->wherePivotNull('left_at')
-            ->get();
-
+        $members = $colocation->users()->wherePivotNull('left_at')->get();
         $membersCount = $members->count();
-        if ($membersCount > 1) {
 
+        if ($membersCount > 1) {
             $share = round($depence->montant / $membersCount, 2);
 
             foreach ($members as $member) {
+                // Skip the payer: they already payed everything
+                if ($member->id == $request->user_id) continue;
 
-                // no dettes with yourself
-                if ($member->id == $request->user_id) {
-                    continue;
-                }
-
+                // Create or update settlements for the other members
                 $settlement = Settlement::updateOrCreate(
                     [
                         'colocation_id' => $colocation->id,
-                        'from_user_id'  => $member->id,          //how will pay
-                        'to_user_id'    => $request->user_id,    // how pay
+                        'from_user_id'  => $member->id,      // who owes
+                        'to_user_id'    => $request->user_id, // who is paid
                         'is_paid'       => false,
                     ],
                     [
                         'amount' => 0
                     ]
                 );
+
                 $settlement->increment('amount', $share);
             }
         }
+
         return back()->with('success', 'Dépense ajoutée.');
     }
 
