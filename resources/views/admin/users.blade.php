@@ -1,5 +1,15 @@
 <x-app-layout>
-    <div class="py-12 bg-gray-50">
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+    <div class="py-12 bg-gray-50" x-data="{
+        banModal: false,
+        unbanModal: false,
+        reasonModal: false,
+        selectedUserId: null,
+        selectedUserName: '',
+        banReason: ''
+    }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Header with gradient and stats -->
             <div class="mb-8 flex justify-between items-center">
@@ -216,7 +226,7 @@
                                             
                                             @if($user->is_banned)
                                                 <button 
-                                                    onclick="showUnbanModal({{ $user->id }}, '{{ $user->name }}')"
+                                                    @click="selectedUserId = {{ $user->id }}; selectedUserName = '{{ $user->name }}'; unbanModal = true"
                                                     class="p-2 text-green-600 hover:text-green-800 transition-colors rounded-lg hover:bg-green-50" 
                                                     title="Débannir">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -225,7 +235,7 @@
                                                 </button>
                                                 @if($user->ban_reason)
                                                     <button type="button" 
-                                                        onclick="showReasonModal('{{ addslashes($user->ban_reason) }}')"
+                                                        @click="banReason = '{{ addslashes($user->ban_reason) }}'; reasonModal = true"
                                                         class="p-2 text-blue-600 hover:text-blue-800 transition-colors rounded-lg hover:bg-blue-50" 
                                                         title="Voir raison">
                                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,7 +245,7 @@
                                                 @endif
                                             @else
                                                 <button 
-                                                    onclick="showBanModal({{ $user->id }}, '{{ $user->name }}')"
+                                                    @click="selectedUserId = {{ $user->id }}; selectedUserName = '{{ $user->name }}'; banModal = true"
                                                     class="p-2 text-red-600 hover:text-red-800 transition-colors rounded-lg hover:bg-red-50" 
                                                     title="Bannir">
                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,7 +270,10 @@
     </div>
 
     <!-- Ban Modal -->
-    <div id="banModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
+    <div x-show="banModal" 
+         x-cloak
+         @click.self="banModal = false"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 transform transition-all">
             <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
                 <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,10 +283,10 @@
             
             <h3 class="text-xl font-bold text-center mb-2">Bannir l'utilisateur</h3>
             <p class="text-gray-600 text-center mb-6">
-                Êtes-vous sûr de vouloir bannir <span id="userName" class="font-semibold"></span> ?
+                Êtes-vous sûr de vouloir bannir <span x-text="selectedUserName" class="font-semibold"></span> ?
             </p>
             
-            <form id="banForm" method="POST">
+            <form :action="`/admin/users/${selectedUserId}/ban`" method="POST">
                 @csrf
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Raison du bannissement</label>
@@ -283,7 +296,7 @@
                 </div>
                 
                 <div class="flex gap-3">
-                    <button type="button" onclick="closeBanModal()" 
+                    <button type="button" @click="banModal = false" 
                         class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
                         Annuler
                     </button>
@@ -297,22 +310,28 @@
     </div>
 
     <!-- Reason Modal -->
-    <div id="reasonModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
+    <div x-show="reasonModal" 
+         x-cloak
+         @click.self="reasonModal = false"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-900">Raison du bannissement</h3>
-                <button onclick="closeReasonModal()" class="text-gray-400 hover:text-gray-600">
+                <button @click="reasonModal = false" class="text-gray-400 hover:text-gray-600">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <p id="banReason" class="text-gray-700 bg-gray-50 p-4 rounded-xl"></p>
+            <p x-text="banReason" class="text-gray-700 bg-gray-50 p-4 rounded-xl"></p>
         </div>
     </div>
 
     <!-- Unban Modal -->
-    <div id="unbanModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
+    <div x-show="unbanModal" 
+         x-cloak
+         @click.self="unbanModal = false"
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 transform transition-all">
             <div class="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
                 <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -322,13 +341,13 @@
             
             <h3 class="text-xl font-bold text-center mb-2">Débannir l'utilisateur</h3>
             <p class="text-gray-600 text-center mb-6">
-                Êtes-vous sûr de vouloir débannir <span id="unbanUserName" class="font-semibold"></span> ?
+                Êtes-vous sûr de vouloir débannir <span x-text="selectedUserName" class="font-semibold"></span> ?
             </p>
             
-            <form id="unbanForm" method="POST">
+            <form :action="`/admin/users/${selectedUserId}/unban`" method="POST">
                 @csrf
                 <div class="flex gap-3">
-                    <button type="button" onclick="closeUnbanModal()" 
+                    <button type="button" @click="unbanModal = false" 
                         class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
                         Annuler
                     </button>
@@ -340,52 +359,4 @@
             </form>
         </div>
     </div>
-
-    <script>
-        function showBanModal(userId, userName) {
-            document.getElementById('userName').textContent = userName;
-            document.getElementById('banForm').action = `/admin/users/${userId}/ban`;
-            document.getElementById('banModal').classList.remove('hidden');
-        }
-
-        function closeBanModal() {
-            document.getElementById('banModal').classList.add('hidden');
-            document.querySelector('textarea[name="ban_reason"]').value = '';
-        }
-
-        function showReasonModal(reason) {
-            document.getElementById('banReason').textContent = reason;
-            document.getElementById('reasonModal').classList.remove('hidden');
-        }
-
-        function closeReasonModal() {
-            document.getElementById('reasonModal').classList.add('hidden');
-        }
-
-        function showUnbanModal(userId, userName) {
-            document.getElementById('unbanUserName').textContent = userName;
-            document.getElementById('unbanForm').action = `/admin/users/${userId}/unban`;
-            document.getElementById('unbanModal').classList.remove('hidden');
-        }
-
-        function closeUnbanModal() {
-            document.getElementById('unbanModal').classList.add('hidden');
-        }
-
-        // Close modals when clicking outside
-        window.onclick = function(event) {
-            const banModal = document.getElementById('banModal');
-            const reasonModal = document.getElementById('reasonModal');
-            const unbanModal = document.getElementById('unbanModal');
-            if (event.target === banModal) {
-                closeBanModal();
-            }
-            if (event.target === reasonModal) {
-                closeReasonModal();
-            }
-            if (event.target === unbanModal) {
-                closeUnbanModal();
-            }
-        }
-    </script>
 </x-app-layout>
