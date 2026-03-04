@@ -24,6 +24,7 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Réputation</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Colocations</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Banni le</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
@@ -41,20 +42,28 @@
                                         <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">Actif</span>
                                     @endif
                                 </td>
+                                <td class="px-6 py-4 text-sm">
+                                    {{ $user->banned_at ? $user->banned_at->format('d/m/Y') : '-' }}
+                                </td>
                                 <td class="px-6 py-4">
                                     @if($user->is_banned)
                                         <form method="POST" action="{{ route('admin.unban', $user) }}" class="inline">
                                             @csrf
                                             <button type="submit" class="text-green-600 hover:text-green-900">Débannir</button>
                                         </form>
-                                    @else
-                                        <form method="POST" action="{{ route('admin.ban', $user) }}" class="inline">
-                                            @csrf
-                                            <button type="submit" class="text-red-600 hover:text-red-900" 
-                                                onclick="return confirm('Êtes-vous sûr de vouloir bannir cet utilisateur ?')">
-                                                Bannir
+                                        @if($user->ban_reason)
+                                            <button type="button" 
+                                                onclick="alert('Raison: {{ addslashes($user->ban_reason) }}')"
+                                                class="ml-2 text-blue-600 hover:text-blue-900 text-sm">
+                                                Voir raison
                                             </button>
-                                        </form>
+                                        @endif
+                                    @else
+                                        <button 
+                                            onclick="showBanModal({{ $user->id }}, '{{ $user->name }}')"
+                                            class="text-red-600 hover:text-red-900">
+                                            Bannir
+                                        </button>
                                     @endif
                                 </td>
                             </tr>
@@ -68,4 +77,43 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Bannissement -->
+    <div id="banModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-lg font-semibold mb-4">Bannir l'utilisateur</h3>
+            <form id="banForm" method="POST">
+                @csrf
+                <p class="mb-4">Voulez-vous bannir <strong id="userName"></strong> ?</p>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Raison (optionnelle)</label>
+                    <textarea name="ban_reason" rows="3" 
+                        class="w-full border-gray-300 rounded-md"
+                        placeholder="Ex: Comportement inapproprié..."></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeBanModal()" 
+                        class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
+                        Annuler
+                    </button>
+                    <button type="submit" 
+                        class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                        Bannir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showBanModal(userId, userName) {
+            document.getElementById('userName').textContent = userName;
+            document.getElementById('banForm').action = `/admin/users/${userId}/ban`;
+            document.getElementById('banModal').classList.remove('hidden');
+        }
+
+        function closeBanModal() {
+            document.getElementById('banModal').classList.add('hidden');
+        }
+    </script>
 </x-app-layout>

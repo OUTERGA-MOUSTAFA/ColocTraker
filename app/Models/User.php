@@ -24,6 +24,8 @@ class User extends Authenticatable
         'password',
         'role',
         'is_banned',
+        'banned_at',
+        'ban_reason',
         'reputation_score'
     ];
 
@@ -47,6 +49,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'banned_at' => 'datetime',
         ];
     }
 

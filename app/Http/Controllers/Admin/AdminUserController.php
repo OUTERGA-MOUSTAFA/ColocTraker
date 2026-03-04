@@ -19,13 +19,17 @@ class AdminUserController extends Controller
         return view('admin.users', compact('users'));
     }
 
-    public function ban(User $user)
+    public function ban(User $user, Request $request)
     {
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Vous ne pouvez pas vous bannir vous-même.');
         }
 
-        DB::transaction(function () use ($user) {
+        $request->validate([
+            'ban_reason' => 'nullable|string|max:500'
+        ]);
+
+        DB::transaction(function () use ($user, $request) {
             // Khrej men jami3 les colocations
             $user->colocation()->wherePivotNull('left_at')->each(function ($colocation) use ($user) {
                 $colocation->users()->updateExistingPivot($user->id, [
@@ -37,7 +41,11 @@ class AdminUserController extends Controller
             $user->decrement('reputation_score');
 
             // Ban l'utilisateur
-            $user->update(['is_banned' => true]);
+            $user->update([
+                'is_banned' => true,
+                'banned_at' => now(),
+                'ban_reason' => $request->ban_reason
+            ]);
         });
 
         return back()->with('success', 'Utilisateur banni et retiré de toutes les colocations.');
@@ -45,7 +53,11 @@ class AdminUserController extends Controller
 
     public function unban(User $user)
     {
-        $user->update(['is_banned' => false]);
+        $user->update([
+            'is_banned' => false,
+            'banned_at' => null,
+            'ban_reason' => null
+        ]);
 
         return back()->with('success', 'Utilisateur débanni avec succès.');
     }
