@@ -2,17 +2,49 @@
     <style>
         [x-cloak] { display: none !important; }
     </style>
+    
     <div class="py-12 bg-gray-50" x-data="{
         banModal: false,
         unbanModal: false,
         reasonModal: false,
         selectedUserId: null,
         selectedUserName: '',
-        banReason: ''
+        banReason: '',
+        searchQuery: '',
+        statusFilter: 'all',
+        sortBy: 'reputation',
+        
+        // Filtered users computation would go here if using live filtering
+        get filteredUsers() {
+            // This would be implemented with live data
+            return [];
+        },
+        
+        // Reset selections when closing modals
+        closeBanModal() {
+            this.banModal = false;
+            this.selectedUserId = null;
+            this.selectedUserName = '';
+            // Optionally reset form
+            $nextTick(() => {
+                if (this.$refs.banForm) this.$refs.banForm.reset();
+            });
+        },
+        
+        closeUnbanModal() {
+            this.unbanModal = false;
+            this.selectedUserId = null;
+            this.selectedUserName = '';
+        },
+        
+        closeReasonModal() {
+            this.reasonModal = false;
+            this.banReason = '';
+        }
     }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- Header with gradient and stats -->
-            <div class="mb-8 flex justify-between items-center">
+            <!-- Header avec gradient et stats -->
+            <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 class="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         Gestion des Utilisateurs
@@ -20,14 +52,14 @@
                     <p class="text-gray-600 mt-2">Gérez les utilisateurs et leurs permissions</p>
                 </div>
                 <div class="flex space-x-3">
-                    <button class="px-4 py-2 bg-white border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="px-4 py-2 bg-white border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2 shadow-sm group">
+                        <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
                         </svg>
                         Exporter
                     </button>
-                    <button class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-md flex items-center gap-2 group">
+                        <svg class="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                         </svg>
                         Ajouter
@@ -35,9 +67,9 @@
                 </div>
             </div>
 
-            <!-- Quick Stats -->
+            <!-- Quick Stats Cards avec animations -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 transform hover:scale-105 transition-transform duration-200">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">Total</p>
@@ -50,7 +82,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 transform hover:scale-105 transition-transform duration-200">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">Actifs</p>
@@ -63,7 +96,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 transform hover:scale-105 transition-transform duration-200">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">Bannis</p>
@@ -76,7 +110,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                
+                <div class="bg-white rounded-xl shadow-sm p-4 border border-gray-100 transform hover:scale-105 transition-transform duration-200">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-gray-500 text-sm">Réputation moyenne</p>
@@ -91,7 +126,7 @@
                 </div>
             </div>
 
-            <!-- Search and Filter Bar -->
+            <!-- Search and Filter Bar avec Alpine.js binding -->
             <div class="bg-white rounded-xl shadow-sm p-4 mb-6 border border-gray-100">
                 <div class="flex flex-col md:flex-row gap-4">
                     <div class="flex-1 relative">
@@ -99,26 +134,28 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
                         <input type="text" 
+                            x-model="searchQuery"
                             placeholder="Rechercher un utilisateur..." 
                             class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                     </div>
                     <div class="flex gap-2">
-                        <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option>Tous les statuts</option>
-                            <option>Actifs</option>
-                            <option>Bannis</option>
+                        <select x-model="statusFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="all">Tous les statuts</option>
+                            <option value="active">Actifs</option>
+                            <option value="banned">Bannis</option>
                         </select>
-                        <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option>Réputation</option>
-                            <option>Croissante</option>
-                            <option>Décroissante</option>
+                        <select x-model="sortBy" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="reputation">Réputation</option>
+                            <option value="reputation_asc">Croissante</option>
+                            <option value="reputation_desc">Décroissante</option>
                         </select>
                     </div>
                 </div>
             </div>
 
+            <!-- Alert Messages -->
             @if(session('success'))
-                <div class="mb-4 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg shadow-sm" role="alert">
+                <div class="mb-4 bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg shadow-sm animate-pulse" role="alert">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,7 +201,7 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             @foreach($users as $user)
-                                <tr class="hover:bg-gray-50 transition-colors">
+                                <tr class="hover:bg-gray-50 transition-colors group">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-10 w-10">
@@ -180,13 +217,16 @@
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="text-sm text-gray-900">{{ $user->email }}</div>
-                                        <div class="text-sm text-gray-500">Vérifié</div>
+                                        <div class="text-sm text-gray-500 flex items-center gap-1">
+                                            <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                            Vérifié
+                                        </div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center">
                                             <div class="flex items-center">
                                                 @for($i = 1; $i <= 5; $i++)
-                                                    <svg class="w-4 h-4 {{ $i <= round($user->reputation_score / 20) ? 'text-yellow-400' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20">
+                                                    <svg class="w-4 h-4 {{ $i <= round(($user->reputation_score ?? 0) / 20) ? 'text-yellow-400' : 'text-gray-300' }}" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                                                     </svg>
                                                 @endfor
@@ -202,7 +242,7 @@
                                     <td class="px-6 py-4">
                                         @if($user->is_banned)
                                             <span class="px-3 py-1 inline-flex items-center gap-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                                                <span class="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse"></span>
                                                 Banni
                                             </span>
                                         @else
@@ -216,7 +256,7 @@
                                         {{ $user->banned_at ? $user->banned_at->format('d/m/Y H:i') : '-' }}
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="flex items-center gap-2">
+                                        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button class="p-2 text-gray-500 hover:text-indigo-600 transition-colors rounded-lg hover:bg-indigo-50" title="Voir détails">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -267,96 +307,141 @@
                 {{ $users->links() }}
             </div>
         </div>
-    </div>
 
-    <!-- Ban Modal -->
-    <div x-show="banModal" 
-         x-cloak
-         @click.self="banModal = false"
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 transform transition-all">
-            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-            </div>
-            
-            <h3 class="text-xl font-bold text-center mb-2">Bannir l'utilisateur</h3>
-            <p class="text-gray-600 text-center mb-6">
-                Êtes-vous sûr de vouloir bannir <span x-text="selectedUserName" class="font-semibold"></span> ?
-            </p>
-            
-            <form :action="`/admin/users/${selectedUserId}/ban`" method="POST">
-                @csrf
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Raison du bannissement</label>
-                    <textarea name="ban_reason" rows="3" 
-                        class="w-full border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                        placeholder="Expliquez la raison du bannissement..."></textarea>
+        <!-- Ban Modal -->
+        <div x-show="banModal" 
+             x-cloak
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click.self="banModal = false"
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 transform transition-all"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95">
+                
+                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
                 </div>
                 
-                <div class="flex gap-3">
-                    <button type="button" @click="banModal = false" 
-                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
-                        Annuler
-                    </button>
-                    <button type="submit" 
-                        class="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-md">
-                        Bannir
+                <h3 class="text-xl font-bold text-center mb-2">Bannir l'utilisateur</h3>
+                <p class="text-gray-600 text-center mb-6">
+                    Êtes-vous sûr de vouloir bannir <span x-text="selectedUserName" class="font-semibold"></span> ?
+                </p>
+                
+                <form :action="`/admin/users/${selectedUserId}/ban`" method="POST" x-ref="banForm">
+                    @csrf
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Raison du bannissement</label>
+                        <textarea name="ban_reason" rows="3" 
+                            class="w-full border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                            placeholder="Expliquez la raison du bannissement..."></textarea>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button type="button" @click="banModal = false" 
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                            Annuler
+                        </button>
+                        <button type="submit" 
+                            class="flex-1 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-md">
+                            Bannir
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Reason Modal -->
+        <div x-show="reasonModal" 
+             x-cloak
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click.self="reasonModal = false"
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95">
+                
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-900">Raison du bannissement</h3>
+                    <button @click="reasonModal = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
                     </button>
                 </div>
-            </form>
+                <p x-text="banReason" class="text-gray-700 bg-gray-50 p-4 rounded-xl"></p>
+            </div>
         </div>
-    </div>
 
-    <!-- Reason Modal -->
-    <div x-show="reasonModal" 
-         x-cloak
-         @click.self="reasonModal = false"
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-900">Raison du bannissement</h3>
-                <button @click="reasonModal = false" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        <!-- Unban Modal -->
+        <div x-show="unbanModal" 
+             x-cloak
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click.self="unbanModal = false"
+             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95">
+                
+                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                     </svg>
-                </button>
+                </div>
+                
+                <h3 class="text-xl font-bold text-center mb-2">Débannir l'utilisateur</h3>
+                <p class="text-gray-600 text-center mb-6">
+                    Êtes-vous sûr de vouloir débannir <span x-text="selectedUserName" class="font-semibold"></span> ?
+                </p>
+                
+                <form :action="`/admin/users/${selectedUserId}/unban`" method="POST">
+                    @csrf
+                    <div class="flex gap-3">
+                        <button type="button" @click="unbanModal = false" 
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
+                            Annuler
+                        </button>
+                        <button type="submit" 
+                            class="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all shadow-md">
+                            Débannir
+                        </button>
+                    </div>
+                </form>
             </div>
-            <p x-text="banReason" class="text-gray-700 bg-gray-50 p-4 rounded-xl"></p>
         </div>
     </div>
 
-    <!-- Unban Modal -->
-    <div x-show="unbanModal" 
-         x-cloak
-         @click.self="unbanModal = false"
-         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 transform transition-all">
-            <div class="flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mx-auto mb-4">
-                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-            </div>
-            
-            <h3 class="text-xl font-bold text-center mb-2">Débannir l'utilisateur</h3>
-            <p class="text-gray-600 text-center mb-6">
-                Êtes-vous sûr de vouloir débannir <span x-text="selectedUserName" class="font-semibold"></span> ?
-            </p>
-            
-            <form :action="`/admin/users/${selectedUserId}/unban`" method="POST">
-                @csrf
-                <div class="flex gap-3">
-                    <button type="button" @click="unbanModal = false" 
-                        class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
-                        Annuler
-                    </button>
-                    <button type="submit" 
-                        class="flex-1 px-4 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all shadow-md">
-                        Débannir
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Optional: Add Alpine.js if not already included -->
+    @if(!isset($alpineLoaded))
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        @php $alpineLoaded = true; @endphp
+    @endif
 </x-app-layout>

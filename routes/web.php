@@ -37,6 +37,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{colocationId}/categories/{categoryId}', [CategoriesController::class, 'destroy'])->name('categories.destroy');
         
         // Depence routes
+        Route::get('/{colocation}/depences', [DepenceController::class, 'index'])->name('depences.index');
         Route::post('/{colocation}/depences',[DepenceController::class, 'store'])->name('depences.store');
         Route::delete('/depences/{depence}',[DepenceController::class, 'destroy'])->name('depences.destroy');
 

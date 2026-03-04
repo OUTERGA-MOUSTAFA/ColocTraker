@@ -10,6 +10,30 @@ use Illuminate\Support\Facades\DB;
 
 class DepenceController extends Controller
 {
+    public function index(Colocation $colocation, Request $request)
+    {
+        // Check if user is member
+        if (!$colocation->users()->where('user_id', auth()->id())->wherePivotNull('left_at')->exists()) {
+            return redirect()->route('dashboard')->with('error', 'Accès refusé.');
+        }
+
+        $query = $colocation->depences()
+            ->with(['user', 'category'])
+            ->orderBy('created_at', 'desc');
+
+        // Filter by month if provided
+        if ($request->has('month') && $request->month) {
+            $query->whereMonth('created_at', $request->month);
+        }
+        if ($request->has('year') && $request->year) {
+            $query->whereYear('created_at', $request->year);
+        }
+
+        $depences = $query->paginate(15);
+
+        return view('colocation.depences', compact('colocation', 'depences'));
+    }
+
     public function store(Request $request, Colocation $colocation)
     {
         $request->validate([
