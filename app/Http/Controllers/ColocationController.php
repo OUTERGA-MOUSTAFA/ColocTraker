@@ -23,7 +23,6 @@ class ColocationController extends Controller
 
     function colocations()
     {
-
         $colocations = Colocation::whereHas('users', function ($query) {
             $query->where('user_id', auth()->id());
         })
@@ -37,6 +36,11 @@ class ColocationController extends Controller
 
     public function show($id, BalanceService $balanceService, ReputationService $reputation)
     {
+        // Ila user mban, ma yqderch ydkhel
+        if (auth()->user()->is_banned) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Accès refusé. Votre compte est banni.');
+        }
         
         $colocation = Colocation::whereHas('users', function ($q) {
             $q->where('user_id', auth()->id())
@@ -93,6 +97,11 @@ class ColocationController extends Controller
 
     function store(Request $request)
     {
+        // Ila user mban, ma yqderch ycréer colocation
+        if (auth()->user()->is_banned) {
+            return back()->with('error', 'Votre compte est banni. Vous ne pouvez pas créer de colocation.');
+        }
+
         $this->authorize('create', Colocation::class);
         $data = $request->validate(
             [

@@ -11,11 +11,28 @@
              <div class="relative max-w-7xl mx-auto sm:px-6 lg:px-8">
                  <h1 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">Colocations</h1>
 
+                 @php
+                     $isBanned = auth()->user()->is_banned;
+                     $isMemberInAnyColocation = $colocations->contains(function($colocation) {
+                         $user = $colocation->users->first();
+                         return $user && is_null($user->pivot->left_at) && $user->pivot->role === 'member';
+                     });
+                     $canCreateColocation = !$isBanned && !$isMemberInAnyColocation;
+                 @endphp
+
+                 @if($canCreateColocation)
                  <div
                      @click="open = true"
                      class="absolute right-3 top-1 cursor-pointer ml-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
                      Create Colocation
                  </div>
+                 @else
+                 <div
+                     class="absolute right-3 top-1 ml-4 bg-gray-400 text-white font-bold py-2 px-4 rounded cursor-not-allowed opacity-50"
+                     title="{{ $isBanned ? 'Compte banni' : 'Vous êtes déjà membre d\'une colocation' }}">
+                     Create Colocation
+                 </div>
+                 @endif
                  <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
                      @if($colocations->isNotEmpty())
                      <div class="p-1">
@@ -47,13 +64,20 @@
                              <p class="text-gray-600 dark:text-gray-400">{{ $colocation->description }}</p>
                              @php
                              $user = $colocation->users->first();
+                             $isBanned = auth()->user()->is_banned;
+                             $hasLeftColocation = $user && !is_null($user->pivot->left_at);
                              @endphp
-                             @if($user && is_null($user->pivot->left_at))
-                             <a href="{{ route('colocation.show', $colocation->id) }}" class="text-blue-500 hover:underline mt-2 inline-block">View Details</a>
-                             @else
-                             <span class="text-gray-400 mt-2 inline-block cursor-not-allowed">
-                                 View Details (Canceled)
+                             
+                             @if($isBanned)
+                             <span class="text-red-500 mt-2 inline-block cursor-not-allowed">
+                                 Accès refusé (Compte banni)
                              </span>
+                             @elseif($hasLeftColocation)
+                             <span class="text-gray-400 mt-2 inline-block cursor-not-allowed">
+                                 View Details (Quitté)
+                             </span>
+                             @else
+                             <a href="{{ route('colocation.show', $colocation->id) }}" class="text-blue-500 hover:underline mt-2 inline-block">View Details</a>
                              @endif
 
                          </div>
