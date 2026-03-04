@@ -6,7 +6,7 @@ use App\Models\Colocation;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Settlement;
-use App\models\User;
+use App\Models\User;
 use App\Services\BalanceService;
 use App\Services\ReputationService;
 use Illuminate\Support\Facades\DB;

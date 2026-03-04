@@ -57,12 +57,21 @@ class BalanceService
 
         foreach ($settlements as $settlement) {
 
+            if (!isset($balances[$settlement->from_user_id])) {
+                $balances[$settlement->from_user_id] = 0;
+            }
+
+            if (!isset($balances[$settlement->to_user_id])) {
+                $balances[$settlement->to_user_id] = 0;
+            }
+
             // i will give your money
             $balances[$settlement->from_user_id] += $settlement->amount;
 
             // give me my money
             $balances[$settlement->to_user_id] -= $settlement->amount;
         }
+        
         $transactions = $this->simplifydettes($balances);
         return [
             'membersCount' => $membersCount,

@@ -12,7 +12,7 @@ class SendInvitationEmail implements ShouldQueue
 {
     use Queueable;
 
-    public Invitation $invitation;
+    public $invitation;
     public $url;
 
     public function __construct(Invitation $invitation, $url)

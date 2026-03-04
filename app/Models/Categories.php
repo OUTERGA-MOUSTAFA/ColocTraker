@@ -18,7 +18,12 @@ class Categories extends Model
     }
     public function depence()
     {
-        return $this->hasMany(Depence::class);
+        return $this->hasMany(Depence::class, 'category_id');
+    }
+
+    public function depences()
+    {
+        return $this->hasMany(Depence::class, 'category_id');
     }
 
     public function users()

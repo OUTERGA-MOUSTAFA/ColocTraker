@@ -6,6 +6,8 @@ use App\Http\Controllers\DepenceController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettlementController;
+use App\Http\Controllers\Admin\AdminStatisticsController;
+use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn() => view('welcome'));
@@ -52,6 +54,13 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('expenses')->group(function () {
         Route::post('/{id}', [ColocationController::class, 'store'])->name('expenses.store');
     });
+});
+
+Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
+    Route::get('/statistics', [AdminStatisticsController::class, 'index'])->name('admin.statistics');
+    Route::get('/users', [AdminUserController::class, 'index'])->name('admin.users');
+    Route::post('/users/{user}/ban', [AdminUserController::class, 'ban'])->name('admin.ban');
+    Route::post('/users/{user}/unban', [AdminUserController::class, 'unban'])->name('admin.unban');
 });
 
 require __DIR__ . '/auth.php';

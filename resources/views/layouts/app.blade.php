@@ -17,8 +17,13 @@
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
             @include('layouts.navigation')
+            
+            @if(auth()->user()?->isAdmin())
+                <x-admin-sidebar />
+            @endif
+            
             <!-- Page Content -->
-            <main>
+            <main class="{{ auth()->user()?->isAdmin() ? 'ml-64' : '' }}">
                 {{ $slot }}
             </main>
             
