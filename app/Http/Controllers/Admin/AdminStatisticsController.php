@@ -24,6 +24,7 @@ class AdminStatisticsController extends Controller
         $expensesCount = Depence::count();
 
         $topCategories = Categories::withSum('depences', 'montant')
+            ->has('depences')
             ->orderByDesc('depences_sum_montant')
             ->take(3)
             ->get();
@@ -35,10 +36,12 @@ class AdminStatisticsController extends Controller
             DB::raw('SUM(montant) as total')
         )
             ->groupBy('year', 'month')
-            ->orderByDesc('year')
-            ->orderByDesc('month')
+            ->orderBy('year', 'asc')
+            ->orderBy('month', 'asc')
             ->take(12)
-            ->get();
+            ->get()
+            ->reverse()
+            ->values();
 
         return view('admin.statistics', compact(
             'totalUsers',
