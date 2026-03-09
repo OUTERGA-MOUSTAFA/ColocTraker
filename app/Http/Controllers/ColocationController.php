@@ -57,6 +57,9 @@ class ColocationController extends Controller
             ->with('error', 'You are not a member of this colocation.');
     }
 
+        // Store colocation ID in session for sidebar
+        session(['current_colocation_id' => $colocation->id]);
+
         $data = $balanceService->getColocationBalances($colocation);
 
         $total = $data['total'] ?? 0;

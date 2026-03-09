@@ -14,7 +14,8 @@
         categoryModal: false,
         paymentModal: false,
         selectedDebt: null
-    }">
+    }"
+    class="mt-16">
         <x-slot name="header">
             <div class="flex justify-between items-center bg-gradient-to-r from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 px-6 py-4 rounded-lg">
                 <div class="flex items-center">
@@ -625,6 +626,13 @@
                                         </svg>
                                         Dépenses récentes
                                     </h3>
+                                    <a href="{{ route('depences.index', $colocation) }}" 
+                                       class="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                                        Voir tout l'historique
+                                        <svg class="h-4 w-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </a>
                                 </div>
 
                                 @if($colocation->depences->count() > 0)

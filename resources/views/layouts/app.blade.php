@@ -18,12 +18,28 @@
         <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
             @include('layouts.navigation')
             
-            @if(auth()->user()?->isAdmin())
-                <x-admin-sidebar />
+            @php
+                // Determine if sidebar should show
+                $isAdminRoute = auth()->user()?->isAdmin() && (request()->routeIs('admin.*') || request()->routeIs('dashboard'));
+                $isColocationRoute = request()->routeIs('colocation.show') || request()->routeIs('depences.index');
+                $showSidebar = $isAdminRoute || $isColocationRoute;
+                
+                // Get colocation from route or session
+                $colocation = null;
+                if ($isColocationRoute) {
+                    $colocationId = request()->route('colocation') ?? request()->route('id');
+                    $colocation = \App\Models\Colocation::find($colocationId);
+                } elseif (session('current_colocation_id')) {
+                    $colocation = \App\Models\Colocation::find(session('current_colocation_id'));
+                }
+            @endphp
+
+            @if($showSidebar)
+                <x-colocation-sidebar :colocation="$colocation" />
             @endif
             
             <!-- Page Content -->
-            <main class="{{ auth()->user()?->isAdmin() ? 'ml-64' : '' }}">
+            <main class="{{ $showSidebar ? 'ml-72' : '' }}">
                 {{ $slot }}
             </main>
             

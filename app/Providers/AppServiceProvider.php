@@ -8,17 +8,18 @@ use App\models\User;
 use App\Policies\ColocationPolicy;
 use App\Policies\InvitationPolicy;
 use App\Policies\UserPolicy;
+use Illuminate\Support\Facades\View;
 // use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
 
-protected $policies = [
-    Colocation::class => ColocationPolicy::class,
-    Invitation::class => InvitationPolicy::class,
-    User::class => UserPolicy::class,
-];
+    protected $policies = [
+        Colocation::class => ColocationPolicy::class,
+        Invitation::class => InvitationPolicy::class,
+        User::class => UserPolicy::class,
+    ];
 
 
     /**
@@ -34,19 +35,14 @@ protected $policies = [
      */
     public function boot(): void
     {
-        // admin pour les statistique et bannir/debannis user
-        // Gate::define('view-dashboard', function ($user) {
-        //     return $user->isAdmin();
-        // });
+        View::composer('*', function ($view) {
+            $colocation = null;
 
-        // // owner gerer colocation, invéter Members
-        // Gate::define('manage-colocation', function ($user) {
-        //     return $user->isAdmin() || $user->isOwner();
-        // });
+            if (session('current_colocation_id')) {
+                $colocation = Colocation::find(session('current_colocation_id'));
+            }
 
-        // // Member
-        // Gate::define('details', function ($user) {
-        //     return $user->isAdmin() || $user->isOwner() || $user->isMember();
-        // });
+            $view->with('colocation', $colocation);
+        });
     }
 }

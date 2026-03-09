@@ -17,6 +17,9 @@ class DepenceController extends Controller
             return redirect()->route('dashboard')->with('error', 'Accès refusé.');
         }
 
+        // Store colocation ID in session for sidebar
+        session(['current_colocation_id' => $colocation->id]);
+
         $query = $colocation->depences()
             ->with(['user', 'category'])
             ->orderBy('created_at', 'desc');
