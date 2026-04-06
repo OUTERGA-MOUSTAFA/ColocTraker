@@ -1,66 +1,59 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+🏠 TaskBoard - Gestion de Colocations & Partage de Dépenses
+PHPLaravelMySQLLicense
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+TaskBoard est une application web complète développée avec le framework Laravel, conçue pour simplifier la gestion des colocations et le suivi des dépenses partagées. Elle permet de calculer automatiquement les soldes de chacun, de gérer les invitations sécurisées, et inclut un système de réputation unique pour garantir la confiance entre colocataires.
 
-## About Laravel
+✨ Fonctionnalités Clés
+👥 Gestion des Colocations
+Création, annulation et gestion complète des colocations.
+Système d'invitation sécurisé par Token unique envoyé par email.
+Restriction intelligente : Un utilisateur ne peut appartenir qu'à une seule colocation active à la fois.
+Gestion des départs (avec historique left_at).
+💰 Suivi des Dépenses
+Ajout/suppression de dépenses (Titre, Montant, Date, Catégorie, Payeur).
+Calculs automatiques des parts individuelles et des soldes.
+Vue simplifiée du type "Qui doit quoi à qui".
+Filtrage des dépenses par mois et statistiques par catégorie.
+⚖️ Système de Réputation & Règles Métier
++1 si un membre quitte la colocation sans dette.
+-1 si un membre quitte avec des dettes non réglées.
+Règle de l'Owner : Si un propriétaire exclut un membre endetté, la dette est automatiquement transférée à l'Owner (ajustement interne).
+🛡️ Administration & Sécurité
+3 Rôles distincts : Member, Owner, Global Admin.
+Le premier utilisateur inscrit devient automatiquement Global Admin.
+Dashboard d'administration (Statistiques globales, gestion des bannis).
+Déconnexion automatique et blocage d'accès pour les utilisateurs bannis.
+🛠️ Stack Technique
+Architecture : Monolithique MVC (Laravel)
+Backend : PHP 8.x
+Base de données : MySQL / PostgreSQL (Gérée via Migrations)
+ORM : Eloquent (hasMany, belongsToMany)
+Authentification : Laravel Breeze / Jetstream
+Frontend : Blade Templates, Tailwind CSS (implicit via Breeze)
+👤 Acteurs et Rôles
+Rôle	Description
+Member	Membre standard. Peut ajouter des dépenses, voir ses soldes, marquer un paiement et quitter la colocation.
+Owner	Créateur de la colocation. Peut inviter/retirer des membres, gérer les catégories et annuler la colocation.
+Global Admin	Administrateur de la plateforme. Accède aux statistiques globales et peut bannir/débannir n'importe quel utilisateur.
+🚀 Scénarios d'Implémentation Principaux
+Invitation : L'Owner génère un token. Le système vérifie la correspondance de l'email et s'assure que l'invité n'a pas déjà une colocation active avant de l'ajouter.
+Dépense Commune : Chaque ajout de dépense déclenche le recalcul instantané des balances de tous les membres actifs.
+Départ avec dette : Application de la pénalité de réputation et redistribution de la dette (selon qu'elle soit volontaire ou forcée par l'Owner).
+Paiement : Action "Marquer payé" depuis la liste des settlements pour réduire les dettes de manière simplifiée.
+📦 Installation & Lancement
+Suivez ces étapes pour lancer le projet en local :
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Prérequis : PHP, Composer, MySQL/PostgreSQL, Node.js & NPM
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+# 1. Cloner le dépôtgit clone https://github.com/OUTERGA-MOUSTAFA/TaskBoard.git# 2. Entrer dans le dossier du projetcd TaskBoard# 3. Installer les dépendances PHPcomposer install# 4. Installer les dépendances Frontend (si nécessaire)npm install && npm run build# 5. Configurer le fichier d'environnementcp .env.example .envphp artisan key:generate# 6. Configurer votre base de données dans le fichier .env# DB_DATABASE=taskboard# DB_USERNAME=root# DB_PASSWORD=your_password# 7. Exécuter les migrationsphp artisan migrate# 8. (Optionnel) Peupler la base de données avec des données de testphp artisan db:seed# 9. Lancer le serveur localphp artisan serve
+💡 Note : Le premier compte créé sur l'application héritera automatiquement du rôle Global Admin.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+🔮 Hors Périmètre (Bonus / Évolutions futures)
+Ces fonctionnalités ne sont pas incluses dans la V1 mais constituent des pistes d'amélioration :
 
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+ Intégration de paiements réels via Stripe
+ Notifications en temps réel (Websockets / Pusher)
+ Calendrier des dépenses récurrentes
+ Export de données (PDF / Excel)
+📄 Licence
+Ce projet est sous licence MIT. Vous êtes libre de l'utiliser et de le modifier.
