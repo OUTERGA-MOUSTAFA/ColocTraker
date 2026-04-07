@@ -84,7 +84,7 @@ Ce projet vise à :
 ## ⚙️ Installation
 
 ```bash
-git clone https://github.com/OUTERGA-MOUSTAFA/TaskBoard.git
+git clone https://github.com/OUTERGA-MOUSTAFA/ColocTraker.git
 cd TaskBoard
 
 composer install
